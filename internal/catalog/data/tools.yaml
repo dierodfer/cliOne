@@ -1,0 +1,95 @@
+categories:
+  - {id: ai, name: AI}
+  - {id: languages, name: Languages}
+  - {id: package_managers, name: Package Managers}
+  - {id: git, name: Git}
+  - {id: kubernetes, name: Kubernetes}
+  - {id: utilities, name: Utilities}
+
+profiles:
+  - id: backend
+    name: Backend
+    categories: [languages, package_managers]
+  - id: frontend
+    name: Frontend
+    categories: [languages, package_managers]
+  - id: devops
+    name: DevOps
+    categories: [kubernetes, git, package_managers]
+  - id: ai
+    name: AI
+    categories: [ai]
+  - id: fullstack
+    name: Full Stack
+    categories: [ai, languages, package_managers, git, kubernetes, utilities]
+
+tools:
+  - id: git
+    name: Git
+    category: git
+    detect: {cmd: "git --version", regex: 'git version (\d+\.\d+\.\d+)'}
+    official_url: "https://git-scm.com/downloads"
+  - id: fzf
+    name: fzf
+    category: utilities
+    detect: {cmd: "fzf --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/junegunn/fzf"
+  - id: ripgrep
+    name: ripgrep
+    category: utilities
+    detect: {cmd: "rg --version", regex: 'ripgrep (\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/BurntSushi/ripgrep"
+  - id: bat
+    name: bat
+    category: utilities
+    detect: {cmd: "bat --version", regex: 'bat (\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/sharkdp/bat"
+  - id: jq
+    name: jq
+    category: utilities
+    detect: {cmd: "jq --version", regex: 'jq-(\d+\.\d+(?:\.\d+)?)'}
+    official_url: "https://jqlang.github.io/jq/"
+  - id: homebrew
+    name: Homebrew
+    category: package_managers
+    detect: {cmd: "brew --version", regex: 'Homebrew (\d+\.\d+\.\d+)'}
+    update: {cmd: "brew update"}
+    official_url: "https://brew.sh"
+  - id: rustup
+    name: "Rust (rustup)"
+    category: languages
+    detect: {cmd: "rustc --version", regex: 'rustc (\d+\.\d+\.\d+)'}
+    update: {cmd: "rustup update"}
+    official_url: "https://www.rust-lang.org/tools/install"
+  - id: node
+    name: Node.js
+    category: languages
+    detect: {cmd: "node --version", regex: 'v(\d+\.\d+\.\d+)'}
+    official_url: "https://nodejs.org"
+  - id: npm
+    name: npm
+    category: package_managers
+    detect: {cmd: "npm --version", regex: '(\d+\.\d+\.\d+)'}
+    update: {cmd: "npm install -g npm"}
+    official_url: "https://www.npmjs.com"
+  - id: gh
+    name: "GitHub CLI"
+    category: git
+    detect: {cmd: "gh --version", regex: 'gh version (\d+\.\d+\.\d+)'}
+    official_url: "https://cli.github.com"
+  - id: copilot
+    name: "GitHub Copilot CLI"
+    category: ai
+    detect: {cmd: "copilot --version", regex: 'v?(\d+\.\d+\.\d+)'}
+    update: {cmd: "copilot update"}
+    official_url: "https://github.com/github/copilot-cli"
+  - id: kubectx
+    name: kubectx
+    category: kubernetes
+    detect: {cmd: "kubectx --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/ahmetb/kubectx"
+  - id: lazygit
+    name: Lazygit
+    category: git
+    detect: {cmd: "lazygit --version", regex: 'version=(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/jesseduffield/lazygit"
