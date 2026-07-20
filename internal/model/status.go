@@ -4,10 +4,10 @@ package model
 type StatusState int
 
 const (
-	StatusUpToDate    StatusState = iota // green: installed and current
-	StatusUpdateAvail                    // yellow: installed, newer version known
-	StatusNotInstalled                   // red: not found on this machine
-	StatusNoUpdater                      // white: installed but no native update path known
+	StatusUpToDate     StatusState = iota // green: installed and current
+	StatusUpdateAvail                     // yellow: installed, newer version known
+	StatusNotInstalled                    // red: not found on this machine
+	StatusNoUpdater                       // white: installed but no native update path known
 )
 
 func (s StatusState) String() string {

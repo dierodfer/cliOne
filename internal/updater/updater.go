@@ -25,9 +25,9 @@ const ExecTimeout = 5 * time.Minute
 //   - not installed / no updater  -> open the official page
 //   - up to date                  -> nothing to do
 //   - update available:
-//       bespoke UpdateSpec        -> run the native update command
-//       manager-owned binary      -> run the manager's synthesized upgrade
-//       otherwise                 -> open the official page
+//     bespoke UpdateSpec        -> run the native update command
+//     manager-owned binary      -> run the manager's synthesized upgrade
+//     otherwise                 -> open the official page
 func Decide(def model.ToolDef, src model.SourceResult, status model.StatusState, reg registry.Registry) model.UpdateAction {
 	switch status {
 	case model.StatusNotInstalled, model.StatusNoUpdater:

@@ -1,0 +1,336 @@
+package tui
+
+import (
+	"errors"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/dierodfer6/cliOne/internal/cache"
+	"github.com/dierodfer6/cliOne/internal/catalog"
+	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer6/cliOne/internal/registry"
+	"github.com/dierodfer6/cliOne/internal/scan"
+	"github.com/dierodfer6/cliOne/internal/source"
+)
+
+func testApp(t *testing.T) *App {
+	t.Helper()
+	cat, err := catalog.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &scan.Scanner{
+		Catalog:  cat,
+		Cache:    cache.NewJSONStore(filepath.Join(t.TempDir(), "cache.json")),
+		Resolver: source.NewResolver(),
+		Registry: registry.Default(),
+	}
+	return NewApp(s)
+}
+
+func syntheticCats() []model.CategoryState {
+	tools := []model.ToolState{
+		{
+			Def:    model.ToolDef{ID: "git", Name: "Git", Category: "git", OfficialURL: "https://git-scm.com"},
+			Status: model.StatusNoUpdater,
+			Detect: model.DetectResult{Installed: true, Version: "2.43.0"},
+			Source: model.SourceResult{Kind: model.SourceAptDnf, BinPath: "/usr/bin/git", AllPaths: []string{"/usr/bin/git", "/usr/local/bin/git"}},
+		},
+		{
+			Def:    model.ToolDef{ID: "lazygit", Name: "Lazygit", Category: "git", OfficialURL: "https://github.com/jesseduffield/lazygit"},
+			Status: model.StatusNotInstalled,
+		},
+	}
+	util := []model.ToolState{
+		{
+			Def:    model.ToolDef{ID: "ripgrep", Name: "ripgrep", Category: "utilities", OfficialURL: "https://github.com/BurntSushi/ripgrep"},
+			Status: model.StatusUpToDate,
+			Detect: model.DetectResult{Installed: true, Version: "14.1.0"},
+			Source: model.SourceResult{Kind: model.SourceCargo, BinPath: "/h/.cargo/bin/rg", AllPaths: []string{"/h/.cargo/bin/rg"}},
+		},
+	}
+	return []model.CategoryState{
+		{Category: model.Category{ID: "git", Name: "Git"}, Tools: tools, Installed: 1, Total: 2},
+		{Category: model.Category{ID: "utilities", Name: "Utilities"}, Tools: util, Installed: 1, Total: 1},
+	}
+}
+
+func loadSynthetic(t *testing.T, a *App) {
+	t.Helper()
+	m, _ := a.Update(scanDoneMsg{cats: syntheticCats()})
+	if m.(*App) != a {
+		t.Fatal("Update should return the same app")
+	}
+}
+
+func keyMsg(k string) tea.KeyMsg {
+	switch k {
+	case "enter":
+		return tea.KeyMsg{Type: tea.KeyEnter}
+	case "esc":
+		return tea.KeyMsg{Type: tea.KeyEsc}
+	case "up":
+		return tea.KeyMsg{Type: tea.KeyUp}
+	case "down":
+		return tea.KeyMsg{Type: tea.KeyDown}
+	default:
+		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
+	}
+}
+
+func TestCategoriesCollapsedByDefaultWithCounts(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	out := a.View()
+	if !strings.Contains(out, "Git") || !strings.Contains(out, "(1/2 installed)") {
+		t.Fatalf("expected collapsed category with counts, got:\n%s", out)
+	}
+	if strings.Contains(out, "Lazygit") {
+		t.Fatalf("tools should be hidden while collapsed, got:\n%s", out)
+	}
+}
+
+func TestEnterExpandsCategoryAndShowsRows(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(keyMsg("enter")) // cursor starts on first category (git)
+	out := a.View()
+	if !strings.Contains(out, "Lazygit") || !strings.Contains(out, "🔴") {
+		t.Fatalf("expected expanded rows with red not-installed row, got:\n%s", out)
+	}
+	// Collapse again with esc on the category row.
+	a.Update(keyMsg("esc"))
+	out = a.View()
+	if strings.Contains(out, "Lazygit") {
+		t.Fatalf("expected collapse on esc, got:\n%s", out)
+	}
+}
+
+func TestNavigationAndClamping(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(keyMsg("up")) // clamp at 0
+	if a.cursor != 0 {
+		t.Fatalf("cursor should clamp at 0, got %d", a.cursor)
+	}
+	for i := 0; i < 20; i++ {
+		a.Update(keyMsg("down"))
+	}
+	rows := a.visibleRows()
+	if a.cursor != len(rows)-1 {
+		t.Fatalf("cursor should clamp at %d, got %d", len(rows)-1, a.cursor)
+	}
+}
+
+func TestVersionDoneFlipsStatusToUpdateAvail(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(versionDoneMsg{ToolID: "ripgrep", Result: model.VersionResult{Latest: "15.0.0"}})
+	ts, ok := a.findTool("ripgrep")
+	if !ok {
+		t.Fatal("ripgrep not found")
+	}
+	if ts.Status != model.StatusUpdateAvail {
+		t.Fatalf("expected update-available after newer latest, got %v", ts.Status)
+	}
+	if ts.Latest.Latest != "15.0.0" {
+		t.Fatalf("latest not stored: %+v", ts.Latest)
+	}
+}
+
+func TestVersionDoneSameVersionStaysGreen(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(versionDoneMsg{ToolID: "ripgrep", Result: model.VersionResult{Latest: "14.1.0"}})
+	ts, _ := a.findTool("ripgrep")
+	if ts.Status != model.StatusUpToDate {
+		t.Fatalf("expected up-to-date, got %v", ts.Status)
+	}
+}
+
+func TestUpdateFailureShowsErrorAndPanelToggles(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	res := model.UpdateResult{
+		Action:   model.ActionRunManagerUpdate,
+		Success:  false,
+		ExitCode: 1,
+		Stderr:   "line1\nline2\npermission denied",
+		Err:      errors.New("exit status 1"),
+	}
+	a.Update(updateDoneMsg{toolID: "ripgrep", result: res})
+	if _, ok := a.updateErrs["ripgrep"]; !ok {
+		t.Fatal("expected error recorded for ripgrep")
+	}
+
+	// Navigate: expand utilities, move onto the ripgrep row, press l.
+	a.expanded["utilities"] = true
+	rows := a.visibleRows()
+	for i, r := range rows {
+		if r.toolID == "ripgrep" {
+			a.cursor = i
+		}
+	}
+	a.Update(keyMsg("l"))
+	out := a.View()
+	if !strings.Contains(out, "permission denied") {
+		t.Fatalf("expected stderr tail in error panel, got:\n%s", out)
+	}
+	if !strings.Contains(out, "✗ update failed") {
+		t.Fatalf("expected inline failure marker, got:\n%s", out)
+	}
+	// Toggle closed.
+	a.Update(keyMsg("l"))
+	if strings.Contains(a.View(), "permission denied") {
+		t.Fatal("panel should close on second l")
+	}
+}
+
+func TestUpdateSuccessTriggersRedetect(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.updating["ripgrep"] = true
+	_, cmd := a.Update(updateDoneMsg{toolID: "ripgrep", result: model.UpdateResult{Action: model.ActionRunManagerUpdate, Success: true}})
+	if a.updating["ripgrep"] {
+		t.Fatal("spinner flag should clear on completion")
+	}
+	if cmd == nil {
+		t.Fatal("expected a re-detect command after a successful update")
+	}
+	// Simulate the re-detect result coming back with the new version.
+	a.Update(versionDoneMsg{ToolID: "ripgrep", Result: model.VersionResult{Latest: "15.0.0"}})
+	a.Update(detectDoneMsg{toolID: "ripgrep", result: model.DetectResult{Installed: true, Version: "15.0.0"}})
+	ts, _ := a.findTool("ripgrep")
+	if ts.Status != model.StatusUpToDate {
+		t.Fatalf("expected green after re-detect matches latest, got %v", ts.Status)
+	}
+}
+
+func TestDoctorViewListsConflicts(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(keyMsg("d"))
+	out := a.View()
+	if !strings.Contains(out, "Doctor") {
+		t.Fatalf("expected doctor view, got:\n%s", out)
+	}
+	if !strings.Contains(out, "/usr/bin/git") || !strings.Contains(out, "active — first on $PATH") {
+		t.Fatalf("expected git PATH conflict with active marker, got:\n%s", out)
+	}
+	if !strings.Contains(out, "/usr/local/bin/git") || !strings.Contains(out, "shadowed") {
+		t.Fatalf("expected shadowed path listed, got:\n%s", out)
+	}
+	// Single-location ripgrep must not appear.
+	if strings.Contains(out, ".cargo/bin/rg") {
+		t.Fatalf("single-path tool should not appear in doctor, got:\n%s", out)
+	}
+	a.Update(keyMsg("esc"))
+	if a.mode != modeTree {
+		t.Fatal("esc should leave doctor view")
+	}
+}
+
+func TestProfileCyclingFiltersCategories(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	if a.profileName() != "All" {
+		t.Fatalf("default profile should be All, got %s", a.profileName())
+	}
+	// Cycle to backend (languages, package_managers): neither synthetic
+	// category is included, so the tree empties.
+	a.Update(keyMsg("p"))
+	if a.profileName() != "Backend" {
+		t.Fatalf("expected Backend after first p, got %s", a.profileName())
+	}
+	if len(a.filteredCats()) != 0 {
+		t.Fatalf("backend profile should hide git/utilities, got %v", a.filteredCats())
+	}
+	// Cycle to devops (kubernetes, git, package_managers): git remains.
+	a.Update(keyMsg("p"))
+	a.Update(keyMsg("p"))
+	if a.profileName() != "DevOps" {
+		t.Fatalf("expected DevOps, got %s", a.profileName())
+	}
+	cats := a.filteredCats()
+	if len(cats) != 1 || cats[0].Category.ID != "git" {
+		t.Fatalf("devops profile should keep only git, got %v", cats)
+	}
+	// Cycle through the rest back to All.
+	for i := 0; i < 3; i++ {
+		a.Update(keyMsg("p"))
+	}
+	if a.profileName() != "All" {
+		t.Fatalf("expected wrap back to All, got %s", a.profileName())
+	}
+}
+
+func TestTextFilterFuzzyAndCombinesWithProfile(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	a.Update(keyMsg("/"))
+	if !a.filtering {
+		t.Fatal("/ should enter filter mode")
+	}
+	for _, r := range "lzgt" {
+		a.Update(keyMsg(string(r)))
+	}
+	out := a.View()
+	if !strings.Contains(out, "Lazygit") {
+		t.Fatalf("fuzzy filter lzgt should match Lazygit, got:\n%s", out)
+	}
+	if strings.Contains(out, "ripgrep") {
+		t.Fatalf("non-matching tools should be hidden, got:\n%s", out)
+	}
+	a.Update(keyMsg("enter")) // commit filter
+
+	// Combine with profile: DevOps keeps git category, filter still applies.
+	a.Update(keyMsg("p")) // Backend
+	if len(a.filteredCats()) != 0 {
+		t.Fatal("backend + lzgt should be empty")
+	}
+	a.Update(keyMsg("p"))
+	a.Update(keyMsg("p")) // DevOps
+	cats := a.filteredCats()
+	if len(cats) != 1 || cats[0].Tools[0].Def.ID != "lazygit" {
+		t.Fatalf("devops + lzgt should keep only lazygit, got %v", cats)
+	}
+
+	// Esc clears the filter.
+	a.Update(keyMsg("esc"))
+	if a.filterText() != "" {
+		t.Fatalf("esc should clear filter, got %q", a.filterText())
+	}
+}
+
+func TestFuzzyMatch(t *testing.T) {
+	cases := []struct {
+		p, s string
+		want bool
+	}{
+		{"", "anything", true},
+		{"rg", "ripgrep", true},
+		{"RG", "ripgrep", true},
+		{"gpx", "ripgrep", false},
+		{"lazygit", "lazy", false},
+	}
+	for _, tc := range cases {
+		if got := fuzzyMatch(tc.p, tc.s); got != tc.want {
+			t.Fatalf("fuzzyMatch(%q,%q)=%v, want %v", tc.p, tc.s, got, tc.want)
+		}
+	}
+}
+
+func TestQuit(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	_, cmd := a.Update(keyMsg("q"))
+	if cmd == nil {
+		t.Fatal("q should produce a quit command")
+	}
+	if msg := cmd(); msg != tea.Quit() {
+		t.Fatalf("expected tea.Quit, got %#v", msg)
+	}
+}
