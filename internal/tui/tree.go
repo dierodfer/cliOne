@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/dierodfer6/cliOne/internal/model"
 )
 
@@ -60,9 +62,13 @@ func (a *App) renderTree(rows []row) string {
 		}
 	}
 
+	inner := a.innerWidth()
 	for i := start; i < end; i++ {
 		r := rows[i]
 		line := a.renderRow(r)
+		if inner > 0 {
+			line = ansi.Truncate(line, inner, "…")
+		}
 		if i == a.cursor {
 			line = selectedStyle.Render(line)
 		}
@@ -75,7 +81,7 @@ func (a *App) renderTree(rows []row) string {
 			}
 		}
 	}
-	return b.String()
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func (a *App) renderRow(r row) string {
@@ -85,8 +91,8 @@ func (a *App) renderRow(r row) string {
 			arrow = "▾"
 		}
 		name := categoryStyle.Render(r.cat.Category.Name)
-		count := countStyle.Render(fmt.Sprintf("(%d/%d installed)", r.cat.Installed, r.cat.Total))
-		return fmt.Sprintf(" %s %s %s", arrow, name, count)
+		pill := pillStyle.Render(fmt.Sprintf("%d/%d", r.cat.Installed, r.cat.Total))
+		return fmt.Sprintf(" %s %s %s", arrow, name, pill)
 	}
 	return toolIndent + a.renderToolLine(r.tool)
 }

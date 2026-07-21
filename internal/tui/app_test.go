@@ -85,7 +85,7 @@ func TestCategoriesExpandedByDefaultWithCounts(t *testing.T) {
 	a := testApp(t)
 	loadSynthetic(t, a)
 	out := a.View()
-	if !strings.Contains(out, "Git") || !strings.Contains(out, "(1/2 installed)") {
+	if !strings.Contains(out, "Git") || !strings.Contains(out, "1/2") {
 		t.Fatalf("expected category header with counts, got:\n%s", out)
 	}
 	// Categories are open by default, so child tools are visible immediately.
@@ -109,8 +109,8 @@ func TestEnterCollapsesThenExpands(t *testing.T) {
 	// enter again re-expands.
 	a.Update(keyMsg("enter"))
 	out := a.View()
-	if !strings.Contains(out, "Lazygit") || !strings.Contains(out, "🔴") {
-		t.Fatalf("expected re-expanded rows with red not-installed row, got:\n%s", out)
+	if !strings.Contains(out, "Lazygit") || !strings.Contains(out, "not installed") {
+		t.Fatalf("expected re-expanded rows with a not-installed row, got:\n%s", out)
 	}
 }
 

@@ -6,11 +6,13 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/dierodfer6/cliOne/internal/detect"
 	"github.com/dierodfer6/cliOne/internal/model"
@@ -240,56 +242,134 @@ func (a *App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (a *App) View() string {
-	title := titleStyle.Render("CLIOne")
-	header := headerStyle.Render(fmt.Sprintf("profile: %s", a.profileName()))
-	if a.filter != "" || a.filtering {
-		cursor := ""
-		if a.filtering {
-			cursor = "▏"
-		}
-		header += headerStyle.Render("   filter: /") + a.filter + cursor
-	}
-
 	if !a.scanned {
-		top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
-		return top + "  scanning installed tools...\n"
+		return a.headerBar() + "\n\n  scanning installed tools...\n"
 	}
 	if a.mode == modeDoctor {
-		top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
-		return top + a.renderDoctor()
+		return a.headerBar() + "\n\n" + a.renderDoctor()
 	}
 
-	rows := a.visibleRows()
-	body := a.renderTree(rows)
+	body := a.renderTree(a.visibleRows())
 
-	// Position indicator lives in the header, so it never eats body height.
+	// Wrap the tree in a rounded panel once the terminal width is known.
+	panel := body
+	if a.width > 4 {
+		panel = boxStyle.Width(a.width - 2).Render(body)
+	}
+
+	statusLine := ""
+	if a.status != "" {
+		statusLine = statusStyle.Render(a.status) + "\n"
+	}
+	return a.headerBar() + "\n\n" + panel + "\n\n" + statusLine + a.footerBar() + "\n"
+}
+
+// headerBar renders the top line: brand + tool count + profile/filter on the
+// left, and the nav hint or scroll position on the right.
+func (a *App) headerBar() string {
+	left := titleStyle.Render("CLIOne") +
+		toolCountStyle.Render(fmt.Sprintf("  %d tools", a.totalTools()))
+	left += brandDimStyle.Render("   ·  profile: " + a.profileName())
+	if a.filter != "" || a.filtering {
+		cur := ""
+		if a.filtering {
+			cur = "▏"
+		}
+		left += brandDimStyle.Render("  ·  /") + a.filter + cur
+	}
+
+	right := navHintStyle.Render("↑/↓ navigate · enter act · ? keys")
+	rows := a.visibleRows()
 	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
 		start := a.scroll
 		end := start + h
 		if end > len(rows) {
 			end = len(rows)
 		}
-		header += countStyle.Render(fmt.Sprintf("   [%d–%d/%d]", start+1, end, len(rows)))
+		right = navHintStyle.Render(fmt.Sprintf("[%d–%d/%d]", start+1, end, len(rows)))
 	}
-	top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
-
-	footer := helpStyle.Render("↑↓ navigate · enter/→ expand/act · u update · / filter · p profile · d doctor · l error log · q quit")
-	statusLine := ""
-	if a.status != "" {
-		statusLine = statusStyle.Render(a.status) + "\n"
-	}
-	return top + body + "\n" + statusLine + footer + "\n"
+	return a.justify(" "+left, right+" ")
 }
 
-// treeBodyHeight returns how many tree lines fit under the fixed header/footer
-// chrome. Zero means the terminal size is unknown (no WindowSizeMsg yet), in
-// which case the whole tree is rendered without windowing.
+// footerBar renders the bottom line: key hints on the left, an installed /
+// not-installed summary on the right.
+func (a *App) footerBar() string {
+	hints := []struct{ key, label string }{
+		{"↑/↓", "Navigate"},
+		{"enter/u", "Update"},
+		{"/", "Filter"},
+		{"p", "Profile"},
+		{"d", "Doctor"},
+		{"q", "Quit"},
+	}
+	var parts []string
+	for _, h := range hints {
+		parts = append(parts, keyChipStyle.Render(h.key)+" "+keyLabelStyle.Render(h.label))
+	}
+	left := " " + strings.Join(parts, "  ")
+
+	inst, notInst := a.installCounts()
+	right := dotGreen.Render("●") + keyLabelStyle.Render(fmt.Sprintf(" %d installed", inst)) +
+		keyLabelStyle.Render("   ") +
+		dotRed.Render("●") + keyLabelStyle.Render(fmt.Sprintf(" %d not installed", notInst)) + " "
+
+	line := a.justify(left, right)
+	if a.width > 0 {
+		line = ansi.Truncate(line, a.width, "…")
+	}
+	return line
+}
+
+// justify places left at the start and right at the end of a width-wide line.
+func (a *App) justify(left, right string) string {
+	if a.width <= 0 {
+		return left + "  " + right
+	}
+	gap := a.width - lipgloss.Width(left) - lipgloss.Width(right)
+	if gap < 2 {
+		gap = 2
+	}
+	return left + strings.Repeat(" ", gap) + right
+}
+
+// totalTools counts every catalog tool (installed or not) across all categories.
+func (a *App) totalTools() int {
+	n := 0
+	for _, cs := range a.cats {
+		n += cs.Total
+	}
+	return n
+}
+
+// installCounts returns how many catalog tools are installed vs. not.
+func (a *App) installCounts() (installed, notInstalled int) {
+	for _, cs := range a.cats {
+		installed += cs.Installed
+		notInstalled += cs.Total - cs.Installed
+	}
+	return installed, notInstalled
+}
+
+// innerWidth is the usable text width inside the rounded panel (border +
+// padding removed). Zero means the width is unknown, so no truncation.
+func (a *App) innerWidth() int {
+	if a.width <= 4 {
+		return 0
+	}
+	return a.width - 4
+}
+
+// treeBodyHeight returns how many tree lines fit inside the panel under the
+// header/footer chrome. Zero means the terminal size is unknown (no
+// WindowSizeMsg yet), in which case the whole tree is rendered without
+// windowing.
 func (a *App) treeBodyHeight() int {
 	if a.height <= 0 {
 		return 0
 	}
-	// header + blank + blank separator + footer + trailing newline.
-	reserved := 5
+	// header + blank + panel top border + panel bottom border + blank +
+	// footer + trailing newline.
+	reserved := 7
 	if a.status != "" {
 		reserved++
 	}
