@@ -5,23 +5,27 @@ categories:
   - {id: git, name: Git}
   - {id: kubernetes, name: Kubernetes}
   - {id: utilities, name: Utilities}
+  - {id: containers, name: Containers}
+  - {id: cloud, name: Cloud}
+  - {id: infrastructure, name: Infrastructure}
+  - {id: editors, name: Editors}
 
 profiles:
   - id: backend
     name: Backend
-    categories: [languages, package_managers]
+    categories: [languages, package_managers, containers, cloud]
   - id: frontend
     name: Frontend
-    categories: [languages, package_managers]
+    categories: [languages, package_managers, editors]
   - id: devops
     name: DevOps
-    categories: [kubernetes, git, package_managers]
+    categories: [kubernetes, git, package_managers, containers, cloud, infrastructure]
   - id: ai
     name: AI
     categories: [ai]
   - id: fullstack
     name: Full Stack
-    categories: [ai, languages, package_managers, git, kubernetes, utilities]
+    categories: [ai, languages, package_managers, git, kubernetes, utilities, containers, cloud, infrastructure, editors]
 
 tools:
   - id: git
@@ -49,6 +53,11 @@ tools:
     category: utilities
     detect: {cmd: "jq --version", regex: 'jq-(\d+\.\d+(?:\.\d+)?)'}
     official_url: "https://jqlang.github.io/jq/"
+  - id: yq
+    name: yq
+    category: utilities
+    detect: {cmd: "yq --version", regex: 'version v?(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/mikefarah/yq"
   - id: homebrew
     name: Homebrew
     category: package_managers
@@ -66,30 +75,166 @@ tools:
     category: languages
     detect: {cmd: "node --version", regex: 'v(\d+\.\d+\.\d+)'}
     official_url: "https://nodejs.org"
+  - id: go
+    name: Go
+    category: languages
+    detect: {cmd: "go version", regex: 'go version go(\d+\.\d+(?:\.\d+)?)'}
+    official_url: "https://go.dev/dl/"
+  - id: python
+    name: Python
+    category: languages
+    detect: {cmd: "python3 --version", regex: 'Python (\d+\.\d+\.\d+)'}
+    official_url: "https://www.python.org/downloads/"
+  - id: java
+    name: "Java (Temurin)"
+    category: languages
+    package_name: "temurin"
+    detect: {cmd: "java -version", regex: 'version "(\d+\.\d+\.\d+)'}
+    official_url: "https://adoptium.net"
+  - id: dotnet
+    name: ".NET SDK"
+    category: languages
+    package_name: "dotnet-sdk"
+    detect: {cmd: "dotnet --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://dotnet.microsoft.com/download"
   - id: npm
     name: npm
     category: package_managers
     detect: {cmd: "npm --version", regex: '(\d+\.\d+\.\d+)'}
     update: {cmd: "npm install -g npm"}
     official_url: "https://www.npmjs.com"
+  - id: pnpm
+    name: pnpm
+    category: package_managers
+    detect: {cmd: "pnpm --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://pnpm.io"
+  - id: yarn
+    name: Yarn
+    category: package_managers
+    detect: {cmd: "yarn --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://yarnpkg.com"
+  - id: poetry
+    name: Poetry
+    category: package_managers
+    detect: {cmd: "poetry --version", regex: 'version (\d+\.\d+\.\d+)'}
+    official_url: "https://python-poetry.org"
   - id: gh
     name: "GitHub CLI"
     category: git
     detect: {cmd: "gh --version", regex: 'gh version (\d+\.\d+\.\d+)'}
     official_url: "https://cli.github.com"
+  - id: lazygit
+    name: Lazygit
+    category: git
+    detect: {cmd: "lazygit --version", regex: 'version=(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/jesseduffield/lazygit"
   - id: copilot
     name: "GitHub Copilot CLI"
     category: ai
     detect: {cmd: "copilot --version", regex: 'v?(\d+\.\d+\.\d+)'}
     update: {cmd: "copilot update"}
     official_url: "https://github.com/github/copilot-cli"
+  - id: claude-code
+    name: "Claude Code"
+    category: ai
+    package_name: "@anthropic-ai/claude-code"
+    detect: {cmd: "claude --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://docs.claude.com/en/docs/claude-code/overview"
+  - id: opencode
+    name: OpenCode
+    category: ai
+    package_name: "opencode-ai"
+    detect: {cmd: "opencode --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://opencode.ai"
+  - id: codex
+    name: "OpenAI Codex CLI"
+    category: ai
+    package_name: "@openai/codex"
+    detect: {cmd: "codex --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/openai/codex"
+  - id: gemini
+    name: "Gemini CLI"
+    category: ai
+    package_name: "@google/gemini-cli"
+    detect: {cmd: "gemini --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://github.com/google-gemini/gemini-cli"
+  - id: aider
+    name: Aider
+    category: ai
+    package_name: "aider-chat"
+    detect: {cmd: "aider --version", regex: 'aider (\d+\.\d+\.\d+)'}
+    official_url: "https://aider.chat"
   - id: kubectx
     name: kubectx
     category: kubernetes
     detect: {cmd: "kubectx --version", regex: '(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/ahmetb/kubectx"
-  - id: lazygit
-    name: Lazygit
-    category: git
-    detect: {cmd: "lazygit --version", regex: 'version=(\d+\.\d+\.\d+)'}
-    official_url: "https://github.com/jesseduffield/lazygit"
+  - id: helm
+    name: Helm
+    category: kubernetes
+    detect: {cmd: "helm version --short", regex: 'v(\d+\.\d+\.\d+)'}
+    official_url: "https://helm.sh"
+  - id: k9s
+    name: k9s
+    category: kubernetes
+    detect: {cmd: "k9s version", regex: 'v(\d+\.\d+\.\d+)'}
+    official_url: "https://k9scli.io"
+  - id: minikube
+    name: Minikube
+    category: kubernetes
+    detect: {cmd: "minikube version", regex: 'v(\d+\.\d+\.\d+)'}
+    official_url: "https://minikube.sigs.k8s.io"
+  - id: docker
+    name: Docker
+    category: containers
+    detect: {cmd: "docker --version", regex: 'Docker version (\d+\.\d+\.\d+)'}
+    official_url: "https://docs.docker.com/get-docker/"
+  - id: docker-compose
+    name: "Docker Compose"
+    category: containers
+    detect: {cmd: "docker compose version", regex: 'v(\d+\.\d+\.\d+)'}
+    official_url: "https://docs.docker.com/compose/install/"
+  - id: podman
+    name: Podman
+    category: containers
+    detect: {cmd: "podman --version", regex: 'version (\d+\.\d+\.\d+)'}
+    official_url: "https://podman.io"
+  - id: aws-cli
+    name: "AWS CLI"
+    category: cloud
+    package_name: "awscli"
+    detect: {cmd: "aws --version", regex: 'aws-cli/(\d+\.\d+\.\d+)'}
+    official_url: "https://aws.amazon.com/cli/"
+  - id: azure-cli
+    name: "Azure CLI"
+    category: cloud
+    detect: {cmd: "az --version", regex: 'azure-cli\s+(\d+\.\d+\.\d+)'}
+    official_url: "https://learn.microsoft.com/cli/azure/install-azure-cli"
+  - id: gcloud
+    name: "Google Cloud CLI"
+    category: cloud
+    package_name: "google-cloud-sdk"
+    detect: {cmd: "gcloud --version", regex: 'Google Cloud SDK (\d+\.\d+\.\d+)'}
+    official_url: "https://cloud.google.com/sdk/docs/install"
+  - id: terraform
+    name: Terraform
+    category: infrastructure
+    detect: {cmd: "terraform --version", regex: 'Terraform v(\d+\.\d+\.\d+)'}
+    official_url: "https://developer.hashicorp.com/terraform/downloads"
+  - id: vault
+    name: Vault
+    category: infrastructure
+    detect: {cmd: "vault --version", regex: 'Vault v(\d+\.\d+\.\d+)'}
+    official_url: "https://developer.hashicorp.com/vault/downloads"
+  - id: vscode
+    name: "Visual Studio Code"
+    category: editors
+    package_name: "visual-studio-code"
+    detect: {cmd: "code --version", regex: '(\d+\.\d+\.\d+)'}
+    official_url: "https://code.visualstudio.com"
+  - id: neovim
+    name: Neovim
+    category: editors
+    package_name: "neovim"
+    detect: {cmd: "nvim --version", regex: 'NVIM v(\d+\.\d+\.\d+)'}
+    official_url: "https://neovim.io"

@@ -10,14 +10,14 @@ func TestLoadEmbeddedCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if len(c.Categories) != 6 {
-		t.Errorf("got %d categories, want 6", len(c.Categories))
+	if len(c.Categories) != 10 {
+		t.Errorf("got %d categories, want 10", len(c.Categories))
 	}
 	if len(c.Profiles) != 5 {
 		t.Errorf("got %d profiles, want 5", len(c.Profiles))
 	}
-	if len(c.Tools) != 13 {
-		t.Errorf("got %d tools, want 13", len(c.Tools))
+	if len(c.Tools) != 39 {
+		t.Errorf("got %d tools, want 39", len(c.Tools))
 	}
 	if _, ok := c.CategoryByID("utilities"); !ok {
 		t.Errorf("expected category utilities to exist")
