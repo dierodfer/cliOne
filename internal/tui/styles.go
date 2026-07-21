@@ -44,6 +44,33 @@ var (
 	toolIndent = "   "
 )
 
+// categoryIcons maps a catalog category ID to a portable emoji glyph. These
+// are plain Unicode emoji (not Nerd Font icons) so they render in any
+// terminal/font without extra setup; unknown category IDs fall back to a
+// generic folder glyph in categoryIcon below.
+var categoryIcons = map[string]string{
+	"ai":               "🤖",
+	"languages":        "💻",
+	"package_managers": "📦",
+	"git":              "🔀",
+	"kubernetes":       "☸️",
+	"utilities":        "🛠️",
+	"containers":       "🐳",
+	"cloud":            "☁️",
+	"infrastructure":   "🏗️",
+	"editors":          "📝",
+}
+
+// categoryIcon returns the portable emoji for a category ID, falling back to
+// a generic glyph for any category the catalog adds later without an entry
+// in categoryIcons.
+func categoryIcon(catID string) string {
+	if icon, ok := categoryIcons[catID]; ok {
+		return icon
+	}
+	return "📁"
+}
+
 // statusIcon renders the 4-state semaphore for a tool row as a colored dot.
 func statusIcon(s model.StatusState) string {
 	switch s {

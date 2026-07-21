@@ -90,9 +90,10 @@ func (a *App) renderRow(r row) string {
 		if a.expanded[r.catID] || a.filterText() != "" {
 			arrow = "▾"
 		}
+		icon := categoryIcon(r.cat.Category.ID)
 		name := categoryStyle.Render(r.cat.Category.Name)
 		pill := pillStyle.Render(fmt.Sprintf("%d/%d", r.cat.Installed, r.cat.Total))
-		return fmt.Sprintf(" %s %s %s", arrow, name, pill)
+		return fmt.Sprintf(" %s %s %s %s", arrow, icon, name, pill)
 	}
 	return toolIndent + a.renderToolLine(r.tool)
 }
