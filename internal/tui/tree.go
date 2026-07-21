@@ -37,10 +37,31 @@ func (a *App) visibleRows() []row {
 }
 
 // renderTree draws the tree with the cursor on rows[a.cursor], including any
-// expanded inline error panels.
+// expanded inline error panels. When the tree is taller than the terminal it
+// renders only the scrolled window rows[a.scroll : a.scroll+h].
 func (a *App) renderTree(rows []row) string {
 	var b strings.Builder
-	for i, r := range rows {
+	if len(rows) == 0 {
+		b.WriteString(dimStyle.Render("  no tools match the current filters"))
+		b.WriteByte('\n')
+		return b.String()
+	}
+
+	start, end := 0, len(rows)
+	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
+		start = a.scroll
+		end = start + h
+		if end > len(rows) {
+			end = len(rows)
+			start = end - h
+		}
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	for i := start; i < end; i++ {
+		r := rows[i]
 		line := a.renderRow(r)
 		if i == a.cursor {
 			line = selectedStyle.Render(line)
@@ -53,10 +74,6 @@ func (a *App) renderTree(rows []row) string {
 				b.WriteByte('\n')
 			}
 		}
-	}
-	if len(rows) == 0 {
-		b.WriteString(dimStyle.Render("  no tools match the current filters"))
-		b.WriteByte('\n')
 	}
 	return b.String()
 }
@@ -113,7 +130,7 @@ func (a *App) toggleExpand(catID string) {
 }
 
 // clampCursor keeps the cursor inside the visible row range after any change
-// to filters, profiles, or expansion.
+// to filters, profiles, or expansion, and scrolls the viewport to follow it.
 func (a *App) clampCursor(rows []row) {
 	if a.cursor >= len(rows) {
 		a.cursor = len(rows) - 1
@@ -121,4 +138,5 @@ func (a *App) clampCursor(rows []row) {
 	if a.cursor < 0 {
 		a.cursor = 0
 	}
+	a.ensureVisible(rows)
 }

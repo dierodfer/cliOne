@@ -81,31 +81,72 @@ func keyMsg(k string) tea.KeyMsg {
 	}
 }
 
-func TestCategoriesCollapsedByDefaultWithCounts(t *testing.T) {
+func TestCategoriesExpandedByDefaultWithCounts(t *testing.T) {
 	a := testApp(t)
 	loadSynthetic(t, a)
 	out := a.View()
 	if !strings.Contains(out, "Git") || !strings.Contains(out, "(1/2 installed)") {
-		t.Fatalf("expected collapsed category with counts, got:\n%s", out)
+		t.Fatalf("expected category header with counts, got:\n%s", out)
 	}
-	if strings.Contains(out, "Lazygit") {
-		t.Fatalf("tools should be hidden while collapsed, got:\n%s", out)
+	// Categories are open by default, so child tools are visible immediately.
+	if !strings.Contains(out, "Lazygit") {
+		t.Fatalf("tools should be visible with categories expanded by default, got:\n%s", out)
 	}
 }
 
-func TestEnterExpandsCategoryAndShowsRows(t *testing.T) {
+func TestEnterCollapsesThenExpands(t *testing.T) {
 	a := testApp(t)
 	loadSynthetic(t, a)
-	a.Update(keyMsg("enter")) // cursor starts on first category (git)
+	// Child visible initially (expanded by default).
+	if !strings.Contains(a.View(), "Lazygit") {
+		t.Fatalf("expected Lazygit visible by default, got:\n%s", a.View())
+	}
+	// enter on the git category (cursor starts there) collapses it.
+	a.Update(keyMsg("enter"))
+	if strings.Contains(a.View(), "Lazygit") {
+		t.Fatalf("expected collapse on enter, got:\n%s", a.View())
+	}
+	// enter again re-expands.
+	a.Update(keyMsg("enter"))
 	out := a.View()
 	if !strings.Contains(out, "Lazygit") || !strings.Contains(out, "🔴") {
-		t.Fatalf("expected expanded rows with red not-installed row, got:\n%s", out)
+		t.Fatalf("expected re-expanded rows with red not-installed row, got:\n%s", out)
 	}
-	// Collapse again with esc on the category row.
-	a.Update(keyMsg("esc"))
-	out = a.View()
-	if strings.Contains(out, "Lazygit") {
-		t.Fatalf("expected collapse on esc, got:\n%s", out)
+}
+
+func TestViewportScrolling(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	// Small terminal: header/footer chrome (4) + 3 body rows.
+	a.Update(tea.WindowSizeMsg{Width: 80, Height: 7})
+	rows := a.visibleRows()
+	if len(rows) <= a.treeBodyHeight() {
+		t.Fatalf("test needs more rows (%d) than the body height (%d)", len(rows), a.treeBodyHeight())
+	}
+	lastTool := rows[len(rows)-1].tool.Def.Name
+
+	// Drive the cursor to the bottom; the viewport must scroll and the last
+	// row must be rendered.
+	for i := 0; i < len(rows); i++ {
+		a.Update(keyMsg("down"))
+	}
+	if a.scroll == 0 {
+		t.Fatalf("viewport should have scrolled down, scroll=%d", a.scroll)
+	}
+	if !strings.Contains(a.View(), lastTool) {
+		t.Fatalf("cursor row %q should be visible after scrolling down, got:\n%s", lastTool, a.View())
+	}
+
+	// Drive back to the top; the viewport must return and the first row render.
+	firstCat := rows[0].cat.Category.Name
+	for i := 0; i < len(rows); i++ {
+		a.Update(keyMsg("up"))
+	}
+	if a.scroll != 0 {
+		t.Fatalf("viewport should return to top, scroll=%d", a.scroll)
+	}
+	if !strings.Contains(a.View(), firstCat) {
+		t.Fatalf("first row %q should be visible after scrolling up, got:\n%s", firstCat, a.View())
 	}
 }
 

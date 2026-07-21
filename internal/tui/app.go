@@ -35,6 +35,7 @@ type App struct {
 
 	mode       viewMode
 	cursor     int
+	scroll     int             // index of the first tree row rendered (viewport top)
 	expanded   map[string]bool // category ID -> open
 	updating   map[string]bool // tool ID -> update running
 	updateErrs map[string]model.UpdateResult
@@ -91,6 +92,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
+		a.clampCursor(a.visibleRows())
 		return a, nil
 
 	case scanDoneMsg:
@@ -100,6 +102,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		a.cats = msg.cats
+		// Categories render expanded by default; only seed IDs the user has
+		// not already toggled so a re-scan never reopens a collapsed one.
+		for _, cs := range a.cats {
+			if _, set := a.expanded[cs.Category.ID]; !set {
+				a.expanded[cs.Category.ID] = true
+			}
+		}
 		// Kick off async latest-version refreshes; cached rows render as-is.
 		funcs := a.scanner.RefreshFuncs(context.Background(), a.cats)
 		cmds := make([]tea.Cmd, 0, len(funcs))
@@ -200,18 +209,17 @@ func (a *App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case key.Matches(msg, a.keys.Back):
-		if a.cursor < len(rows) {
+		// A committed filter forces categories open, so backing out of the
+		// filter takes precedence over collapsing the category under the cursor.
+		if a.filter != "" {
+			a.filter = ""
+		} else if a.cursor < len(rows) {
 			r := rows[a.cursor]
 			if r.isCategory && a.expanded[r.catID] {
 				a.toggleExpand(r.catID)
-			} else if a.filter != "" {
-				a.filter = ""
 			}
-			a.clampCursor(a.visibleRows())
-		} else if a.filter != "" {
-			a.filter = ""
-			a.clampCursor(a.visibleRows())
 		}
+		a.clampCursor(a.visibleRows())
 
 	case key.Matches(msg, a.keys.Filter):
 		a.filtering = true
@@ -241,16 +249,29 @@ func (a *App) View() string {
 		}
 		header += headerStyle.Render("   filter: /") + a.filter + cursor
 	}
-	top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
 
 	if !a.scanned {
+		top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
 		return top + "  scanning installed tools...\n"
 	}
 	if a.mode == modeDoctor {
+		top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
 		return top + a.renderDoctor()
 	}
 
-	body := a.renderTree(a.visibleRows())
+	rows := a.visibleRows()
+	body := a.renderTree(rows)
+
+	// Position indicator lives in the header, so it never eats body height.
+	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
+		start := a.scroll
+		end := start + h
+		if end > len(rows) {
+			end = len(rows)
+		}
+		header += countStyle.Render(fmt.Sprintf("   [%d–%d/%d]", start+1, end, len(rows)))
+	}
+	top := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", header) + "\n\n"
 
 	footer := helpStyle.Render("↑↓ navigate · enter/→ expand/act · u update · / filter · p profile · d doctor · l error log · q quit")
 	statusLine := ""
@@ -258,6 +279,46 @@ func (a *App) View() string {
 		statusLine = statusStyle.Render(a.status) + "\n"
 	}
 	return top + body + "\n" + statusLine + footer + "\n"
+}
+
+// treeBodyHeight returns how many tree lines fit under the fixed header/footer
+// chrome. Zero means the terminal size is unknown (no WindowSizeMsg yet), in
+// which case the whole tree is rendered without windowing.
+func (a *App) treeBodyHeight() int {
+	if a.height <= 0 {
+		return 0
+	}
+	// header + blank + blank separator + footer + trailing newline.
+	reserved := 5
+	if a.status != "" {
+		reserved++
+	}
+	h := a.height - reserved
+	if h < 1 {
+		h = 1
+	}
+	return h
+}
+
+// ensureVisible scrolls the viewport so the cursor row stays on screen.
+func (a *App) ensureVisible(rows []row) {
+	h := a.treeBodyHeight()
+	if h <= 0 || len(rows) <= h {
+		a.scroll = 0
+		return
+	}
+	if a.cursor < a.scroll {
+		a.scroll = a.cursor
+	}
+	if a.cursor >= a.scroll+h {
+		a.scroll = a.cursor - h + 1
+	}
+	if max := len(rows) - h; a.scroll > max {
+		a.scroll = max
+	}
+	if a.scroll < 0 {
+		a.scroll = 0
+	}
 }
 
 // setLatest updates one tool's latest-version result and recomputes its status.
