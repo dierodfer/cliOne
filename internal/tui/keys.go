@@ -11,6 +11,7 @@ type keyMap struct {
 	Log     key.Binding
 	Doctor  key.Binding
 	Profile key.Binding
+	Refresh key.Binding
 	Quit    key.Binding
 	Back    key.Binding
 }
@@ -25,6 +26,7 @@ func defaultKeyMap() keyMap {
 		Log:     key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "error log")),
 		Doctor:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "doctor")),
 		Profile: key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "profile")),
+		Refresh: key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh latest versions")),
 		Quit:    key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
 		Back:    key.NewBinding(key.WithKeys("esc", "left"), key.WithHelp("esc/←", "back/collapse")),
 	}

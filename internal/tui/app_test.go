@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -147,6 +148,99 @@ func TestViewportScrolling(t *testing.T) {
 	}
 	if !strings.Contains(a.View(), firstCat) {
 		t.Fatalf("first row %q should be visible after scrolling up, got:\n%s", firstCat, a.View())
+	}
+}
+
+func TestRefreshKeyForcesFullRefresh(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+
+	_, cmd := a.Update(keyMsg("r"))
+	if cmd == nil {
+		t.Fatal("expected a refresh command")
+	}
+	// Synthetic data has two installed tools: git and ripgrep.
+	if a.refreshPending != 2 {
+		t.Fatalf("expected 2 pending refreshes, got %d", a.refreshPending)
+	}
+	if !strings.Contains(a.status, "refreshing 2") {
+		t.Fatalf("expected a refreshing status, got %q", a.status)
+	}
+
+	// Simulate the results streaming back one at a time.
+	a.Update(versionDoneMsg{ToolID: "git", Result: model.VersionResult{Latest: "2.44.0"}})
+	if a.refreshPending != 1 {
+		t.Fatalf("expected 1 pending after first result, got %d", a.refreshPending)
+	}
+	a.Update(versionDoneMsg{ToolID: "ripgrep", Result: model.VersionResult{Latest: "14.1.0"}})
+	if a.refreshPending != 0 {
+		t.Fatalf("expected 0 pending after both results, got %d", a.refreshPending)
+	}
+	if a.status != "latest versions refreshed" {
+		t.Fatalf("expected completion status, got %q", a.status)
+	}
+
+	// A refresh already in flight ignores a second `r` press.
+	a.refreshPending = 1
+	_, cmd2 := a.Update(keyMsg("r"))
+	if cmd2 != nil {
+		t.Fatal("expected refresh to be a no-op while one is already in flight")
+	}
+}
+
+func TestDoctorViewportScrolling(t *testing.T) {
+	a := testApp(t)
+	var tools []model.ToolState
+	for i := 0; i < 20; i++ {
+		id := fmt.Sprintf("tool%02d", i)
+		tools = append(tools, model.ToolState{
+			Def:    model.ToolDef{ID: id, Name: id, OfficialURL: "https://example.com"},
+			Status: model.StatusLatestUnknown,
+			Detect: model.DetectResult{Installed: true, Version: "1.0.0"},
+			Source: model.SourceResult{Kind: model.SourceManual, AllPaths: []string{"/a/" + id, "/b/" + id}},
+		})
+	}
+	a.Update(scanDoneMsg{cats: []model.CategoryState{
+		{Category: model.Category{ID: "utilities", Name: "Utilities"}, Tools: tools, Installed: 20, Total: 20},
+	}})
+	a.Update(tea.WindowSizeMsg{Width: 80, Height: 12})
+	a.Update(keyMsg("d"))
+	if a.mode != modeDoctor {
+		t.Fatal("expected doctor mode")
+	}
+
+	lines := a.doctorLines()
+	h := a.treeBodyHeight()
+	if len(lines) <= h {
+		t.Fatalf("test needs more doctor lines (%d) than the body height (%d)", len(lines), h)
+	}
+	lastToolID := tools[len(tools)-1].Def.ID
+	if strings.Contains(a.View(), lastToolID) {
+		t.Fatalf("last tool %q should not be visible before scrolling, got:\n%s", lastToolID, a.View())
+	}
+
+	// Scroll down past the window: the viewport must move and the last
+	// conflict entry must become visible.
+	for i := 0; i < len(lines); i++ {
+		a.Update(keyMsg("down"))
+	}
+	if a.doctorScroll == 0 {
+		t.Fatal("expected the doctor viewport to have scrolled down")
+	}
+	if !strings.Contains(a.View(), lastToolID) {
+		t.Fatalf("expected last tool %q visible after scrolling down, got:\n%s", lastToolID, a.View())
+	}
+
+	// Scroll back up to the top: this is the bug being fixed — earlier
+	// entries must become visible again.
+	for i := 0; i < len(lines); i++ {
+		a.Update(keyMsg("up"))
+	}
+	if a.doctorScroll != 0 {
+		t.Fatalf("expected the doctor viewport to return to the top, got scroll=%d", a.doctorScroll)
+	}
+	if !strings.Contains(a.View(), "Doctor — PATH conflicts") {
+		t.Fatalf("expected the doctor heading visible after scrolling back up, got:\n%s", a.View())
 	}
 }
 

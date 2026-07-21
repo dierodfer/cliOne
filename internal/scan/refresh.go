@@ -23,8 +23,10 @@ var ErrNoLatestSource = errors.New("scan: no latest-version source for tool")
 // RefreshFuncs returns one closure per installed tool that fetches the live
 // latest version, writes it through the cache, and reports a LatestUpdate.
 // Each closure is designed to be wrapped in a tea.Cmd so rows update in place
-// without blocking startup. Tools with fresh cached data are skipped.
-func (s *Scanner) RefreshFuncs(ctx context.Context, cats []model.CategoryState) []func() LatestUpdate {
+// without blocking startup. Tools with fresh cached data are skipped unless
+// force is set, in which case every installed tool is re-queried live
+// regardless of the cache's TTL (used by the TUI's manual refresh key).
+func (s *Scanner) RefreshFuncs(ctx context.Context, cats []model.CategoryState, force bool) []func() LatestUpdate {
 	var out []func() LatestUpdate
 	for _, cs := range cats {
 		for _, ts := range cs.Tools {
@@ -32,8 +34,10 @@ func (s *Scanner) RefreshFuncs(ctx context.Context, cats []model.CategoryState) 
 			if !ts.Detect.Installed {
 				continue
 			}
-			if _, ok := s.Cache.GetLatest(ts.Def.ID); ok {
-				continue // cache still fresh
+			if !force {
+				if _, ok := s.Cache.GetLatest(ts.Def.ID); ok {
+					continue // cache still fresh
+				}
 			}
 			out = append(out, func() LatestUpdate {
 				return s.FetchLatest(ctx, ts.Def, ts.Source)

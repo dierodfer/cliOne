@@ -56,7 +56,8 @@ uv, apt/dnf, or manual).
 | `u` | same as enter on a tool row: run the native/manager update when one exists (🟡), otherwise open the official page (🔴/⚪, or 🟡 with no updater) |
 | `/` | fuzzy text filter (enter to keep, esc to clear) |
 | `p` | cycle profile (Backend / Frontend / DevOps / AI / Full Stack / All) — filters the tree by category, combinable with `/` |
-| `d` | doctor view: read-only list of tools that resolve at more than one `$PATH` location, with the active one marked |
+| `d` | doctor view: read-only, scrollable list of tools that resolve at more than one `$PATH` location, with the active one marked (`↑`/`↓` scrolls, `esc`/`d` goes back) |
+| `r` | force a live re-check of every installed tool's latest version, ignoring the cache's TTL |
 | `l` | on a row whose update failed: toggle an inline panel with the tail of stderr |
 | `esc` / `←` | collapse / back / clear filter |
 | `q` | quit |

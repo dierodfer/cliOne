@@ -35,13 +35,16 @@ type App struct {
 	keys    keyMap
 	spinner spinner.Model
 
-	mode       viewMode
-	cursor     int
-	scroll     int             // index of the first tree row rendered (viewport top)
-	expanded   map[string]bool // category ID -> open
-	updating   map[string]bool // tool ID -> update running
-	updateErrs map[string]model.UpdateResult
-	errOpen    map[string]bool // tool ID -> error panel open
+	mode         viewMode
+	cursor       int
+	scroll       int             // index of the first tree row rendered (viewport top)
+	doctorScroll int             // index of the first doctor line rendered (viewport top)
+	expanded     map[string]bool // category ID -> open
+	updating     map[string]bool // tool ID -> update running
+	updateErrs   map[string]model.UpdateResult
+	errOpen      map[string]bool // tool ID -> error panel open
+
+	refreshPending int // outstanding versionDoneMsg replies from a manual `r` refresh
 
 	filter     string
 	filtering  bool // typing after `/`
@@ -95,6 +98,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
 		a.clampCursor(a.visibleRows())
+		a.clampDoctorScroll()
 		return a, nil
 
 	case scanDoneMsg:
@@ -112,7 +116,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		// Kick off async latest-version refreshes; cached rows render as-is.
-		funcs := a.scanner.RefreshFuncs(context.Background(), a.cats)
+		funcs := a.scanner.RefreshFuncs(context.Background(), a.cats, false)
 		cmds := make([]tea.Cmd, 0, len(funcs))
 		for _, f := range funcs {
 			f := f
@@ -122,6 +126,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case versionDoneMsg:
 		a.setLatest(msg.ToolID, msg.Result)
+		if a.refreshPending > 0 {
+			a.refreshPending--
+			if a.refreshPending == 0 {
+				a.status = "latest versions refreshed"
+			}
+		}
 		return a, nil
 
 	case detectDoneMsg:
@@ -182,6 +192,12 @@ func (a *App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return a, tea.Quit
 			}
 			a.mode = modeTree
+		case key.Matches(msg, a.keys.Up):
+			a.doctorScroll--
+			a.clampDoctorScroll()
+		case key.Matches(msg, a.keys.Down):
+			a.doctorScroll++
+			a.clampDoctorScroll()
 		}
 		return a, nil
 	}
@@ -233,25 +249,53 @@ func (a *App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, a.keys.Doctor):
 		a.mode = modeDoctor
+		a.doctorScroll = 0
 
 	case key.Matches(msg, a.keys.Profile):
 		a.cycleProfile()
 		a.clampCursor(a.visibleRows())
+
+	case key.Matches(msg, a.keys.Refresh):
+		return a, a.startFullRefresh()
 	}
 	return a, nil
+}
+
+// startFullRefresh forces a live latest-version re-check for every installed
+// tool, ignoring the cache's TTL. Ignored if a previous refresh is still in
+// flight, mirroring the row-level "already updating" guard in actOnTool.
+func (a *App) startFullRefresh() tea.Cmd {
+	if a.refreshPending > 0 {
+		return nil
+	}
+	funcs := a.scanner.RefreshFuncs(context.Background(), a.cats, true)
+	if len(funcs) == 0 {
+		a.status = "nothing to refresh"
+		return nil
+	}
+	a.refreshPending = len(funcs)
+	a.status = fmt.Sprintf("refreshing %d tool(s)...", a.refreshPending)
+	cmds := make([]tea.Cmd, 0, len(funcs))
+	for _, f := range funcs {
+		f := f
+		cmds = append(cmds, func() tea.Msg { return versionDoneMsg(f()) })
+	}
+	return tea.Batch(cmds...)
 }
 
 func (a *App) View() string {
 	if !a.scanned {
 		return a.headerBar() + "\n\n  scanning installed tools...\n"
 	}
+
+	var body string
 	if a.mode == modeDoctor {
-		return a.headerBar() + "\n\n" + a.renderDoctor()
+		body = a.renderDoctor()
+	} else {
+		body = a.renderTree(a.visibleRows())
 	}
 
-	body := a.renderTree(a.visibleRows())
-
-	// Wrap the tree in a rounded panel once the terminal width is known.
+	// Wrap the body in a rounded panel once the terminal width is known.
 	panel := body
 	if a.width > 4 {
 		panel = boxStyle.Width(a.width - 2).Render(body)
@@ -279,8 +323,20 @@ func (a *App) headerBar() string {
 	}
 
 	right := navHintStyle.Render("↑/↓ navigate · enter act · ? keys")
-	rows := a.visibleRows()
-	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
+	h := a.treeBodyHeight()
+	if a.mode == modeDoctor {
+		lines := a.doctorLines()
+		if h > 0 && len(lines) > h {
+			start := a.doctorScroll
+			end := start + h
+			if end > len(lines) {
+				end = len(lines)
+			}
+			right = navHintStyle.Render(fmt.Sprintf("[%d–%d/%d]", start+1, end, len(lines)))
+		} else {
+			right = navHintStyle.Render("doctor view")
+		}
+	} else if rows := a.visibleRows(); h > 0 && len(rows) > h {
 		start := a.scroll
 		end := start + h
 		if end > len(rows) {
@@ -292,7 +348,8 @@ func (a *App) headerBar() string {
 }
 
 // footerBar renders the bottom line: key hints on the left, an installed /
-// not-installed summary on the right.
+// not-installed summary on the right. Hints are mode-specific: the doctor
+// view is read-only and scrolls instead of acting on rows.
 func (a *App) footerBar() string {
 	hints := []struct{ key, label string }{
 		{"↑/↓", "Navigate"},
@@ -300,7 +357,15 @@ func (a *App) footerBar() string {
 		{"/", "Filter"},
 		{"p", "Profile"},
 		{"d", "Doctor"},
+		{"r", "Refresh"},
 		{"q", "Quit"},
+	}
+	if a.mode == modeDoctor {
+		hints = []struct{ key, label string }{
+			{"↑/↓", "Scroll"},
+			{"esc/d", "Back"},
+			{"q", "Quit"},
+		}
 	}
 	var parts []string
 	for _, h := range hints {
