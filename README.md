@@ -39,9 +39,9 @@ semaphore per row:
 | Icon | Meaning |
 |------|---------|
 | 🟢 | installed and up to date |
-| 🟡 | installed, a newer version is available |
+| 🟡 | installed, a newer version is available (whenever it is out of date) |
 | 🔴 | not installed (row shows the official install page) |
-| ⚪ | installed, but no native update path is known |
+| ⚪ | installed, but the latest version could not be verified |
 
 Rows also show the detected version, the newest known version when an update
 is available, and which package manager owns the binary (homebrew, cargo, npm,
@@ -53,7 +53,7 @@ uv, apt/dnf, or manual).
 |-----|--------|
 | `↑`/`↓` (or `k`/`j`) | navigate |
 | `enter` / `→` | expand/collapse a category, or act on a tool row |
-| `u` | same as enter on a tool row: run the update (🟡) or open the official page (🔴/⚪) |
+| `u` | same as enter on a tool row: run the native/manager update when one exists (🟡), otherwise open the official page (🔴/⚪, or 🟡 with no updater) |
 | `/` | fuzzy text filter (enter to keep, esc to clear) |
 | `p` | cycle profile (Backend / Frontend / DevOps / AI / Full Stack / All) — filters the tree by category, combinable with `/` |
 | `d` | doctor view: read-only list of tools that resolve at more than one `$PATH` location, with the active one marked |

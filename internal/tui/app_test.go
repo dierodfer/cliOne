@@ -35,7 +35,7 @@ func syntheticCats() []model.CategoryState {
 	tools := []model.ToolState{
 		{
 			Def:    model.ToolDef{ID: "git", Name: "Git", Category: "git", OfficialURL: "https://git-scm.com"},
-			Status: model.StatusNoUpdater,
+			Status: model.StatusLatestUnknown,
 			Detect: model.DetectResult{Installed: true, Version: "2.43.0"},
 			Source: model.SourceResult{Kind: model.SourceAptDnf, BinPath: "/usr/bin/git", AllPaths: []string{"/usr/bin/git", "/usr/local/bin/git"}},
 		},
@@ -247,6 +247,30 @@ func TestUpdateSuccessTriggersRedetect(t *testing.T) {
 	ts, _ := a.findTool("ripgrep")
 	if ts.Status != model.StatusUpToDate {
 		t.Fatalf("expected green after re-detect matches latest, got %v", ts.Status)
+	}
+}
+
+func TestYellowWithoutUpdaterOpensPageNotError(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	// Outdated (yellow) but manual source with no bespoke updater: acting on it
+	// must open the official page, not attempt (and fail) an update.
+	ts := model.ToolState{
+		Def:    model.ToolDef{ID: "manualtool", Name: "ManualTool", OfficialURL: "https://example.com"},
+		Status: model.StatusUpdateAvail,
+		Source: model.SourceResult{Kind: model.SourceManual},
+		Detect: model.DetectResult{Installed: true, Version: "1.0.0"},
+		Latest: model.VersionResult{Latest: "2.0.0"},
+	}
+	cmd := a.actOnTool(ts)
+	if a.updating["manualtool"] {
+		t.Fatal("a yellow row with no updater must not start an update")
+	}
+	if cmd == nil {
+		t.Fatal("expected an open-page command")
+	}
+	if _, ok := cmd().(openURLDoneMsg); !ok {
+		t.Fatal("expected openURLDoneMsg (open official page) for a yellow row without an updater")
 	}
 }
 

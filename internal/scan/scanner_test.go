@@ -4,11 +4,9 @@ import (
 	"testing"
 
 	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
 )
 
 func TestComputeStatus(t *testing.T) {
-	reg := registry.Default()
 	withUpdate := model.ToolDef{ID: "t", Update: &model.UpdateSpec{Cmd: "t update"}}
 	plain := model.ToolDef{ID: "t"}
 	installed := func(v string) model.DetectResult { return model.DetectResult{Installed: true, Version: v} }
@@ -22,20 +20,24 @@ func TestComputeStatus(t *testing.T) {
 		want   model.StatusState
 	}{
 		{"not installed", plain, model.DetectResult{}, model.SourceResult{}, model.VersionResult{}, model.StatusNotInstalled},
-		{"installed manual no updater", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{}, model.StatusNoUpdater},
-		{"installed apt no updater", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceAptDnf}, model.VersionResult{}, model.StatusNoUpdater},
-		{"native updater latest unknown", withUpdate, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{}, model.StatusUpToDate},
+		// Installed but no latest version resolved yet/at all -> white, regardless of updater.
+		{"installed, latest unverifiable (manual)", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{}, model.StatusLatestUnknown},
+		{"installed, latest unverifiable (apt)", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceAptDnf}, model.VersionResult{}, model.StatusLatestUnknown},
+		{"native updater, latest unverifiable", withUpdate, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{}, model.StatusLatestUnknown},
+		{"npm owned, latest unverifiable", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceNpmGlobal}, model.VersionResult{}, model.StatusLatestUnknown},
+		// Yellow whenever outdated, even without any updater.
+		{"outdated, no updater still yellow", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.1.0"}, model.StatusUpdateAvail},
 		{"native updater newer available", withUpdate, installed("1.0.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.1.0"}, model.StatusUpdateAvail},
-		{"native updater current", withUpdate, installed("1.1.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.1.0"}, model.StatusUpToDate},
 		{"brew owned newer available", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceHomebrew}, model.VersionResult{Latest: "2.0.0"}, model.StatusUpdateAvail},
+		// Green when current (latest known and not newer).
+		{"native updater current", withUpdate, installed("1.1.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.1.0"}, model.StatusUpToDate},
 		{"cargo owned current", plain, installed("14.1.0"), model.SourceResult{Kind: model.SourceCargo}, model.VersionResult{Latest: "14.1.0"}, model.StatusUpToDate},
-		{"npm owned latest unknown", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceNpmGlobal}, model.VersionResult{}, model.StatusUpToDate},
-		{"equal but differently formatted stays green", withUpdate, installed("1.7"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.7.0"}, model.StatusUpToDate},
-		{"latest older than installed stays green", withUpdate, installed("1.1.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.0.0"}, model.StatusUpToDate},
+		{"equal but differently formatted stays green", plain, installed("1.7"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.7.0"}, model.StatusUpToDate},
+		{"latest older than installed stays green", plain, installed("1.1.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.0.0"}, model.StatusUpToDate},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ComputeStatus(tc.def, tc.det, tc.src, tc.latest, reg)
+			got := ComputeStatus(tc.def, tc.det, tc.src, tc.latest)
 			if got != tc.want {
 				t.Fatalf("got %v, want %v", got, tc.want)
 			}

@@ -30,7 +30,7 @@ func TestDecideRoutingTable(t *testing.T) {
 	}{
 		{"not installed", false, model.SourceUnknown, model.StatusNotInstalled, model.ActionOpenOfficialPage},
 		{"not installed with update spec", true, model.SourceUnknown, model.StatusNotInstalled, model.ActionOpenOfficialPage},
-		{"no updater", false, model.SourceManual, model.StatusNoUpdater, model.ActionOpenOfficialPage},
+		{"latest unknown", false, model.SourceManual, model.StatusLatestUnknown, model.ActionOpenOfficialPage},
 		{"up to date", true, model.SourceHomebrew, model.StatusUpToDate, model.ActionNone},
 		{"update avail, native updater wins", true, model.SourceHomebrew, model.StatusUpdateAvail, model.ActionRunNativeUpdate},
 		{"update avail, homebrew owned", false, model.SourceHomebrew, model.StatusUpdateAvail, model.ActionRunManagerUpdate},

@@ -325,7 +325,7 @@ func (a *App) ensureVisible(rows []row) {
 func (a *App) setLatest(toolID string, res model.VersionResult) {
 	a.mutateTool(toolID, func(ts *model.ToolState) {
 		ts.Latest = res
-		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest, a.scanner.Registry)
+		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest)
 	})
 }
 
@@ -334,7 +334,7 @@ func (a *App) setLatest(toolID string, res model.VersionResult) {
 func (a *App) setDetect(toolID string, res model.DetectResult) {
 	a.mutateTool(toolID, func(ts *model.ToolState) {
 		ts.Detect = res
-		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest, a.scanner.Registry)
+		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest)
 	})
 }
 

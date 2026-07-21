@@ -30,7 +30,7 @@ const ExecTimeout = 5 * time.Minute
 //     otherwise                 -> open the official page
 func Decide(def model.ToolDef, src model.SourceResult, status model.StatusState, reg registry.Registry) model.UpdateAction {
 	switch status {
-	case model.StatusNotInstalled, model.StatusNoUpdater:
+	case model.StatusNotInstalled, model.StatusLatestUnknown:
 		return model.ActionOpenOfficialPage
 	case model.StatusUpToDate:
 		return model.ActionNone

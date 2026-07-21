@@ -11,17 +11,20 @@ import (
 	"github.com/dierodfer6/cliOne/internal/updater"
 )
 
-// actOnTool handles enter/u on a tool row:
-//   - update available: run the update asynchronously with a spinner on the
-//     row; resolve to green or an inline error state when it finishes
-//   - not installed / no updater: open the official page in the OS browser
+// actOnTool handles enter/u on a tool row. The action is chosen by
+// updater.Decide, so a row is updated only when a real update command backs it:
+//   - runnable update (native or manager): run it async with a row spinner;
+//     resolve to green or an inline error state when it finishes
+//   - otherwise (not installed, latest unknown, or update-available with no
+//     updater): open the official page in the OS browser
 //   - up to date: nothing
 func (a *App) actOnTool(ts model.ToolState) tea.Cmd {
 	if a.updating[ts.Def.ID] {
 		return nil // an update is already running on this row
 	}
-	switch ts.Status {
-	case model.StatusUpdateAvail:
+	action := updater.Decide(ts.Def, ts.Source, ts.Status, a.scanner.Registry)
+	switch action {
+	case model.ActionRunNativeUpdate, model.ActionRunManagerUpdate:
 		a.updating[ts.Def.ID] = true
 		delete(a.updateErrs, ts.Def.ID)
 		a.errOpen[ts.Def.ID] = false
@@ -32,7 +35,7 @@ func (a *App) actOnTool(ts model.ToolState) tea.Cmd {
 				return updateDoneMsg{toolID: def.ID, result: updater.Execute(context.Background(), def, src)}
 			},
 		)
-	case model.StatusNotInstalled, model.StatusNoUpdater:
+	case model.ActionOpenOfficialPage:
 		url := ts.Def.OfficialURL
 		id := ts.Def.ID
 		return func() tea.Msg {

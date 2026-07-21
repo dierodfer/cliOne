@@ -37,7 +37,7 @@ func statusIcon(s model.StatusState) string {
 		return "🟡"
 	case model.StatusNotInstalled:
 		return "🔴"
-	case model.StatusNoUpdater:
+	case model.StatusLatestUnknown:
 		return "⚪"
 	default:
 		return "  "

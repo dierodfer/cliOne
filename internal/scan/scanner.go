@@ -118,7 +118,7 @@ func (s *Scanner) scanTool(ctx context.Context, def model.ToolDef) (model.ToolSt
 		ts.Latest = latest
 	}
 
-	ts.Status = ComputeStatus(def, ts.Detect, ts.Source, ts.Latest, s.Registry)
+	ts.Status = ComputeStatus(def, ts.Detect, ts.Source, ts.Latest)
 	return ts, fresh
 }
 
@@ -154,27 +154,23 @@ func BinName(def model.ToolDef) string {
 	return fields[0]
 }
 
-// ComputeStatus derives the 4-state semaphore for one tool.
+// ComputeStatus derives the 4-state semaphore for one tool. The icon reflects
+// version state only; whether an updater exists is decided later by the
+// updater when the row is acted on.
 //
-//   - not detected                          -> not installed (red)
-//   - installed, no native or manager path  -> no updater (white)
-//   - installed, known newer latest         -> update available (yellow)
-//   - otherwise                             -> up to date (green); an async
-//     latest refresh can flip it to yellow later
-func ComputeStatus(def model.ToolDef, det model.DetectResult, src model.SourceResult, latest model.VersionResult, reg registry.Registry) model.StatusState {
+//   - not detected                       -> not installed (red)
+//   - installed, latest not verifiable   -> latest unknown (white); an async
+//     latest refresh can flip it to green/yellow once it resolves
+//   - installed, a newer latest is known -> update available (yellow)
+//   - installed and current              -> up to date (green)
+func ComputeStatus(def model.ToolDef, det model.DetectResult, src model.SourceResult, latest model.VersionResult) model.StatusState {
 	if !det.Installed {
 		return model.StatusNotInstalled
 	}
-	canUpdate := def.Update != nil
-	if !canUpdate {
-		if m, ok := reg.ForKind(src.Kind); ok && len(m.UpdateCommand(def.PkgName())) > 0 {
-			canUpdate = true
-		}
+	if latest.Latest == "" || det.Version == "" {
+		return model.StatusLatestUnknown
 	}
-	if !canUpdate {
-		return model.StatusNoUpdater
-	}
-	if latest.Latest != "" && det.Version != "" && versionIsNewer(latest.Latest, det.Version) {
+	if versionIsNewer(latest.Latest, det.Version) {
 		return model.StatusUpdateAvail
 	}
 	return model.StatusUpToDate
