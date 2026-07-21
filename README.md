@@ -16,6 +16,23 @@ make build      # builds bin/clione
 ./bin/clione    # opens the TUI (no subcommands in v0.1)
 ```
 
+### Shell completion
+
+`clione` is TUI-only, so completion just covers its flags (`--version`,
+`--help`). Ready-made scripts live in [`completions/`](completions/):
+
+```sh
+make completions          # list the available scripts
+make install-completions  # install them for bash, zsh, and fish
+```
+
+`install-completions` copies the scripts to the standard per-user locations
+(`~/.local/share/bash-completion/completions`, `~/.local/share/zsh/site-functions`,
+`~/.config/fish/completions`). Override `BASH_COMPLETION_DIR`,
+`ZSH_COMPLETION_DIR`, or `FISH_COMPLETION_DIR` to install elsewhere. For zsh,
+make sure the target directory is in your `fpath`. Restart your shell to
+activate.
+
 The tree shows every catalog tool grouped by category, with a 4-state
 semaphore per row:
 
