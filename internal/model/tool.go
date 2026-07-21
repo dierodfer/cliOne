@@ -6,12 +6,25 @@ package model
 
 // ToolDef describes a tool tracked by CLIOne, as declared in the catalog.
 type ToolDef struct {
-	ID          string      `yaml:"id"`
-	Name        string      `yaml:"name"`
-	Category    string      `yaml:"category"`
-	Detect      DetectSpec  `yaml:"detect"`
+	ID       string     `yaml:"id"`
+	Name     string     `yaml:"name"`
+	Category string     `yaml:"category"`
+	Detect   DetectSpec `yaml:"detect"`
+	// PackageName is the name the owning package manager knows the tool by,
+	// when it differs from ID (e.g. a crate/formula/npm package name that is
+	// not the same as the tool's binary or catalog ID). Empty means "use ID".
+	PackageName string      `yaml:"package_name,omitempty"`
 	Update      *UpdateSpec `yaml:"update,omitempty"` // nil => no bespoke native updater
 	OfficialURL string      `yaml:"official_url"`
+}
+
+// PkgName is the name to pass to a registry.Manager for this tool: the
+// explicit PackageName override when set, otherwise the tool ID.
+func (d ToolDef) PkgName() string {
+	if d.PackageName != "" {
+		return d.PackageName
+	}
+	return d.ID
 }
 
 // DetectSpec describes how to detect the installed version of a tool.

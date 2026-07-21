@@ -54,7 +54,7 @@ func (s *Scanner) FetchLatest(ctx context.Context, def model.ToolDef, src model.
 	var latest string
 	var err error
 	if m, ok := s.Registry.ForKind(src.Kind); ok {
-		latest, err = m.LatestVersion(ctx, def.ID)
+		latest, err = m.LatestVersion(ctx, def.PkgName())
 	} else if repo, ok := githubRepoFromURL(def.OfficialURL); ok && s.GitHub != nil {
 		latest, err = s.GitHub.LatestVersion(ctx, repo)
 	} else {

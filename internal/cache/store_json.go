@@ -130,6 +130,24 @@ func (s *JSONStore) SetSource(toolID string, v model.SourceResult) error {
 	return s.save()
 }
 
+// SetSources writes several source entries and persists the file once, instead
+// of one full-file rewrite per entry. This is what a scan uses to record every
+// freshly resolved source in a single locked write.
+func (s *JSONStore) SetSources(vals map[string]model.SourceResult) error {
+	if len(vals) == 0 {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.nowFunc()
+	for toolID, v := range vals {
+		s.data.Sources[toolID] = sourceEntry{
+			Kind: v.Kind, BinPath: v.BinPath, AllPaths: v.AllPaths, StoredAt: now,
+		}
+	}
+	return s.save()
+}
+
 func (s *JSONStore) GetLatest(toolID string) (model.VersionResult, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

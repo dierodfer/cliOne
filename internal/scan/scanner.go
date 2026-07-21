@@ -53,15 +53,26 @@ func New() (*Scanner, error) {
 // and groups results into CategoryState in catalog order.
 func (s *Scanner) Scan(ctx context.Context) ([]model.CategoryState, error) {
 	states := make([]model.ToolState, len(s.Catalog.Tools))
+	fresh := make([]*model.SourceResult, len(s.Catalog.Tools))
 	var wg sync.WaitGroup
 	for i, def := range s.Catalog.Tools {
 		wg.Add(1)
 		go func(i int, def model.ToolDef) {
 			defer wg.Done()
-			states[i] = s.scanTool(ctx, def)
+			states[i], fresh[i] = s.scanTool(ctx, def)
 		}(i, def)
 	}
 	wg.Wait()
+
+	// Persist every freshly resolved source in a single batched write rather
+	// than one full-file rewrite per tool.
+	newSources := map[string]model.SourceResult{}
+	for i, src := range fresh {
+		if src != nil {
+			newSources[s.Catalog.Tools[i].ID] = *src
+		}
+	}
+	s.saveSources(newSources)
 
 	byCat := map[string][]model.ToolState{}
 	for _, ts := range states {
@@ -85,16 +96,21 @@ func (s *Scanner) Scan(ctx context.Context) ([]model.CategoryState, error) {
 	return out, nil
 }
 
-func (s *Scanner) scanTool(ctx context.Context, def model.ToolDef) model.ToolState {
+// scanTool assembles one tool's state. When it resolves the source live (cache
+// miss), it returns that result as the second value so Scan can batch the cache
+// writes; a nil second value means nothing new needs persisting.
+func (s *Scanner) scanTool(ctx context.Context, def model.ToolDef) (model.ToolState, *model.SourceResult) {
 	ts := model.ToolState{Def: def}
 	ts.Detect, _ = detect.RunDetect(ctx, def)
 
+	var fresh *model.SourceResult
 	if ts.Detect.Installed {
 		if src, ok := s.Cache.GetSource(def.ID); ok {
 			ts.Source = src
 		} else if res, err := s.Resolver.Resolve(ctx, BinName(def)); err == nil {
 			ts.Source = res
-			_ = s.Cache.SetSource(def.ID, res)
+			r := res
+			fresh = &r
 		}
 	}
 
@@ -103,7 +119,29 @@ func (s *Scanner) scanTool(ctx context.Context, def model.ToolDef) model.ToolSta
 	}
 
 	ts.Status = ComputeStatus(def, ts.Detect, ts.Source, ts.Latest, s.Registry)
-	return ts
+	return ts, fresh
+}
+
+// batchSourceSetter is the optional Cache extension for one-shot batched source
+// writes. The JSON store implements it; any Cache that does not still works via
+// the per-entry SetSource fallback.
+type batchSourceSetter interface {
+	SetSources(map[string]model.SourceResult) error
+}
+
+// saveSources persists freshly resolved sources, preferring a single batched
+// write when the cache supports it.
+func (s *Scanner) saveSources(newSources map[string]model.SourceResult) {
+	if len(newSources) == 0 {
+		return
+	}
+	if bs, ok := s.Cache.(batchSourceSetter); ok {
+		_ = bs.SetSources(newSources)
+		return
+	}
+	for id, src := range newSources {
+		_ = s.Cache.SetSource(id, src)
+	}
 }
 
 // BinName is the binary a tool is detected with: the first word of its detect
@@ -129,14 +167,14 @@ func ComputeStatus(def model.ToolDef, det model.DetectResult, src model.SourceRe
 	}
 	canUpdate := def.Update != nil
 	if !canUpdate {
-		if m, ok := reg.ForKind(src.Kind); ok && len(m.UpdateCommand(def.ID)) > 0 {
+		if m, ok := reg.ForKind(src.Kind); ok && len(m.UpdateCommand(def.PkgName())) > 0 {
 			canUpdate = true
 		}
 	}
 	if !canUpdate {
 		return model.StatusNoUpdater
 	}
-	if latest.Latest != "" && det.Version != "" && latest.Latest != det.Version {
+	if latest.Latest != "" && det.Version != "" && versionIsNewer(latest.Latest, det.Version) {
 		return model.StatusUpdateAvail
 	}
 	return model.StatusUpToDate

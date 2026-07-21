@@ -75,4 +75,11 @@ func TestCommandSynthesis(t *testing.T) {
 	if got := Command(def(false), src(model.SourceManual), model.ActionRunManagerUpdate, reg); got != nil {
 		t.Fatalf("manager update without a manager must be nil, got %v", got)
 	}
+
+	// A PackageName override is what the manager command targets, not the ID.
+	renamed := model.ToolDef{ID: "tool", PackageName: "the-crate", OfficialURL: "https://example.com"}
+	got := Command(renamed, src(model.SourceCargo), model.ActionRunManagerUpdate, reg)
+	if len(got) != 4 || got[2] != "the-crate" {
+		t.Fatalf("expected cargo command to target package override, got %v", got)
+	}
 }

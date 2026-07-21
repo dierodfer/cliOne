@@ -44,9 +44,10 @@ Profiles are pure view filters over categories (the `p` key in the TUI).
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `id` | yes | unique across the catalog; doubles as the package name managers use to synthesize update commands (`brew upgrade <id>`, `cargo install <id> --force`, ...) |
+| `id` | yes | unique across the catalog; the default package name managers use to synthesize update commands (`brew upgrade <id>`, `cargo install <id> --force`, ...) and to query the latest version |
 | `name` | yes | display name |
 | `category` | yes | must reference an existing category ID |
+| `package_name` | no | overrides `id` as the name passed to the owning package manager, for tools whose crate/formula/npm package name differs from their catalog ID or binary name. Defaults to `id` when omitted |
 | `detect.cmd` | yes | command run to detect the installed version (first word is also the binary looked up on `$PATH` for ownership detection) |
 | `detect.regex` | yes | must compile and contain **exactly one** capture group, which extracts the version from the command's combined stdout+stderr |
 | `update` | no | only for tools with a **bespoke native updater** (e.g. `rustup update`). Omit it for manager-owned tools: their update command is synthesized at runtime from the owning manager. Omit it too for tools with no updater at all |

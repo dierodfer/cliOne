@@ -38,7 +38,7 @@ func Decide(def model.ToolDef, src model.SourceResult, status model.StatusState,
 		if def.Update != nil {
 			return model.ActionRunNativeUpdate
 		}
-		if m, ok := reg.ForKind(src.Kind); ok && len(m.UpdateCommand(def.ID)) > 0 {
+		if m, ok := reg.ForKind(src.Kind); ok && len(m.UpdateCommand(def.PkgName())) > 0 {
 			return model.ActionRunManagerUpdate
 		}
 		return model.ActionOpenOfficialPage
@@ -58,7 +58,7 @@ func Command(def model.ToolDef, src model.SourceResult, action model.UpdateActio
 		return strings.Fields(def.Update.Cmd)
 	case model.ActionRunManagerUpdate:
 		if m, ok := reg.ForKind(src.Kind); ok {
-			return m.UpdateCommand(def.ID)
+			return m.UpdateCommand(def.PkgName())
 		}
 		return nil
 	default:

@@ -30,6 +30,8 @@ func TestComputeStatus(t *testing.T) {
 		{"brew owned newer available", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceHomebrew}, model.VersionResult{Latest: "2.0.0"}, model.StatusUpdateAvail},
 		{"cargo owned current", plain, installed("14.1.0"), model.SourceResult{Kind: model.SourceCargo}, model.VersionResult{Latest: "14.1.0"}, model.StatusUpToDate},
 		{"npm owned latest unknown", plain, installed("1.0.0"), model.SourceResult{Kind: model.SourceNpmGlobal}, model.VersionResult{}, model.StatusUpToDate},
+		{"equal but differently formatted stays green", withUpdate, installed("1.7"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.7.0"}, model.StatusUpToDate},
+		{"latest older than installed stays green", withUpdate, installed("1.1.0"), model.SourceResult{Kind: model.SourceManual}, model.VersionResult{Latest: "1.0.0"}, model.StatusUpToDate},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

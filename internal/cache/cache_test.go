@@ -122,6 +122,34 @@ func TestCorruptFileRecovery(t *testing.T) {
 	}
 }
 
+func TestSetSourcesBatch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.json")
+	s := NewJSONStore(path)
+
+	batch := map[string]model.SourceResult{
+		"git": {Kind: model.SourceAptDnf, BinPath: "/usr/bin/git"},
+		"rg":  {Kind: model.SourceCargo, BinPath: "/home/u/.cargo/bin/rg"},
+	}
+	if err := s.SetSources(batch); err != nil {
+		t.Fatal(err)
+	}
+
+	// Every entry persists and reloads from the single write.
+	s2 := NewJSONStore(path)
+	if got, ok := s2.GetSource("git"); !ok || got.Kind != model.SourceAptDnf {
+		t.Fatalf("git not persisted by batch: %+v ok=%v", got, ok)
+	}
+	if got, ok := s2.GetSource("rg"); !ok || got.Kind != model.SourceCargo {
+		t.Fatalf("rg not persisted by batch: %+v ok=%v", got, ok)
+	}
+
+	// An empty batch is a no-op and never errors.
+	if err := s.SetSources(nil); err != nil {
+		t.Fatalf("empty batch should be a no-op, got %v", err)
+	}
+}
+
 func TestMissingFileStartsEmpty(t *testing.T) {
 	s := NewJSONStore(filepath.Join(t.TempDir(), "nope", "cache.json"))
 	if _, ok := s.GetLatest("x"); ok {
