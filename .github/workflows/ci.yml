@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.5.0
+
+      - name: go build
+        run: go build -o bin/clione ./cmd/clione
+
+      - name: go test
+        run: go test -race ./...
+
+      - name: clione list --refresh
+        # Compiles, installs (builds the binary), runs it, and checks that
+        # installed/latest versions are detected correctly on this OS — the
+        # real, user-facing subcommand, not a hidden debug path.
+        run: ./bin/clione list --refresh
+
+      - name: clione doctor
+        # Cheap extra smoke test of the other new subcommand. `update` is
+        # never invoked in CI since it can mutate the runner.
+        run: ./bin/clione doctor

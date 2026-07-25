@@ -1,5 +1,8 @@
 # CLIOne
 
+[![CI](https://github.com/dierodfer/cliOne/actions/workflows/ci.yml/badge.svg)](https://github.com/dierodfer/cliOne/actions/workflows/ci.yml)
+[![PR checks](https://github.com/dierodfer/cliOne/actions/workflows/pr.yml/badge.svg)](https://github.com/dierodfer/cliOne/actions/workflows/pr.yml)
+
 CLIOne is a cross-platform TUI (Linux/macOS) that gives you visibility into the
 developer tools installed on your machine, organized by category, and updates
 them using each tool's **own native update mechanism**. It never installs
@@ -13,13 +16,33 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) and
 
 ```sh
 make build      # builds bin/clione
-./bin/clione    # opens the TUI (no subcommands in v0.1)
+./bin/clione    # opens the TUI (the primary, full-featured surface)
 ```
+
+The TUI is where browsing, filtering, doctor/conflicts, and update actions
+live. `clione` also has a few non-interactive subcommands for scripting and
+CI — each is a thin wrapper over the same engine the TUI uses, so behavior
+never diverges between the two:
+
+```sh
+clione list             # print every catalog tool, grouped by category
+clione list --refresh   # same, but force a live latest-version check first
+clione doctor           # print PATH conflicts (headless version of the `d` view)
+clione update <tool-id> # run one tool's update non-interactively
+clione --version        # print the app version and exit
+```
+
+`clione update <tool-id>` never installs anything from scratch, matching the
+TUI: it runs a native/manager update when one exists, otherwise it prints the
+official page and exits non-zero. Exit codes: `0` success or already up to
+date, `1` the update ran and failed, `2` unknown tool ID, `3` nothing
+runnable (redirected to the official page).
 
 ### Shell completion
 
-`clione` is TUI-only, so completion just covers its flags (`--version`,
-`--help`). Ready-made scripts live in [`completions/`](completions/):
+Completion covers the top-level flags (`--version`, `--help`); the `update`/
+`doctor`/`list` subcommands aren't completion-aware yet. Ready-made scripts
+live in [`completions/`](completions/):
 
 ```sh
 make completions          # list the available scripts
@@ -92,3 +115,12 @@ make run     # go run ./cmd/clione
 The tool catalog lives in `internal/catalog/data/tools.yaml` and is embedded
 into the binary; its schema is documented in
 [docs/catalog-schema.md](docs/catalog-schema.md).
+
+## Releasing
+
+Create and publish a release from the GitHub UI as usual (pick or create a
+`vX.Y.Z` tag, write notes, click Publish). The `release.yml` workflow then
+builds `clione` for linux/darwin × amd64/arm64 with that tag stamped in as
+the version (shown by `clione --version` and in the TUI header) and attaches
+the binaries plus a `checksums.txt` to that same release — it never creates
+a release on its own.

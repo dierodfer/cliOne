@@ -96,6 +96,17 @@ func (s *Scanner) Scan(ctx context.Context) ([]model.CategoryState, error) {
 	return out, nil
 }
 
+// ScanOne detects and resolves a single tool, independent of Scan's batched
+// cache-write wiring. Used by CLI subcommands that only need one tool (e.g.
+// `clione update <tool>`) instead of paying for a full catalog scan.
+func (s *Scanner) ScanOne(ctx context.Context, def model.ToolDef) model.ToolState {
+	ts, fresh := s.scanTool(ctx, def)
+	if fresh != nil {
+		_ = s.Cache.SetSource(def.ID, *fresh)
+	}
+	return ts
+}
+
 // scanTool assembles one tool's state. When it resolves the source live (cache
 // miss), it returns that result as the second value so Scan can batch the cache
 // writes; a nil second value means nothing new needs persisting.

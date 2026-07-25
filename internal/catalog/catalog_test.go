@@ -25,6 +25,12 @@ func TestLoadEmbeddedCatalog(t *testing.T) {
 	if got := len(c.ToolsByCategory("git")); got != 3 {
 		t.Errorf("got %d tools in git category, want 3 (git, gh, lazygit)", got)
 	}
+	if tool, ok := c.ToolByID("git"); !ok || tool.Name != "Git" {
+		t.Errorf("expected ToolByID(\"git\") to find Git, got %+v ok=%v", tool, ok)
+	}
+	if _, ok := c.ToolByID("nonexistent-tool"); ok {
+		t.Errorf("expected ToolByID to miss for an unknown ID")
+	}
 }
 
 func TestUpdateSpecPresence(t *testing.T) {

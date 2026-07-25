@@ -2,6 +2,12 @@ BINARY := clione
 BIN_DIR := bin
 COMPLETIONS_DIR := completions
 
+# Version stamped into the binary (shown by `clione --version` and in the TUI
+# header). Same mechanism CI/release use, so local builds reflect reality
+# instead of always saying "dev".
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -X main.version=$(VERSION)
+
 # Shell completion install locations. Override on the command line if your
 # setup differs, e.g. `make install-completions ZSH_COMPLETION_DIR=/usr/local/share/zsh/site-functions`.
 BASH_COMPLETION_DIR ?= $(HOME)/.local/share/bash-completion/completions
@@ -11,7 +17,7 @@ FISH_COMPLETION_DIR ?= $(HOME)/.config/fish/completions
 .PHONY: build test lint vet run clean completions install-completions
 
 build:
-	go build -o $(BIN_DIR)/$(BINARY) ./cmd/clione
+	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY) ./cmd/clione
 
 test:
 	go test ./...

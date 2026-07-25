@@ -63,3 +63,13 @@ func (c *Catalog) ToolsByCategory(catID string) []model.ToolDef {
 	}
 	return out
 }
+
+// ToolByID returns the tool with the given catalog ID.
+func (c *Catalog) ToolByID(id string) (model.ToolDef, bool) {
+	for _, t := range c.Tools {
+		if t.ID == id {
+			return t, true
+		}
+	}
+	return model.ToolDef{}, false
+}

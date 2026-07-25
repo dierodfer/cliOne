@@ -29,6 +29,7 @@ const (
 // App is the Bubble Tea model for the whole TUI.
 type App struct {
 	scanner  *scan.Scanner
+	version  string
 	cats     []model.CategoryState
 	profiles []model.Profile
 
@@ -56,22 +57,23 @@ type App struct {
 	height  int
 }
 
-// Run starts the TUI and blocks until quit.
-func Run() error {
+// Run starts the TUI and blocks until quit. version is shown in the header.
+func Run(version string) error {
 	scanner, err := scan.New()
 	if err != nil {
 		return err
 	}
-	app := NewApp(scanner)
+	app := NewApp(scanner, version)
 	_, err = tea.NewProgram(app, tea.WithAltScreen()).Run()
 	return err
 }
 
 // NewApp builds the initial model. Exposed for tests.
-func NewApp(scanner *scan.Scanner) *App {
+func NewApp(scanner *scan.Scanner, version string) *App {
 	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot))
 	a := &App{
 		scanner:    scanner,
+		version:    version,
 		keys:       defaultKeyMap(),
 		spinner:    sp,
 		expanded:   map[string]bool{},
@@ -311,7 +313,11 @@ func (a *App) View() string {
 // headerBar renders the top line: brand + tool count + profile/filter on the
 // left, and the nav hint or scroll position on the right.
 func (a *App) headerBar() string {
-	left := titleStyle.Render("CLIOne") +
+	title := "CLIOne"
+	if a.version != "" {
+		title += " " + a.version
+	}
+	left := titleStyle.Render(title) +
 		toolCountStyle.Render(fmt.Sprintf("  %d tools", a.totalTools()))
 	left += brandDimStyle.Render("   ·  profile: " + a.profileName())
 	if a.filter != "" || a.filtering {

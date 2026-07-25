@@ -49,7 +49,7 @@ func (g *GitHubRelease) LatestVersion(ctx context.Context, pkgName string) (stri
 	if err != nil {
 		return "", fmt.Errorf("github %s: %w", pkgName, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 300 || resp.StatusCode > 399 {
 		return "", fmt.Errorf("github %s: expected redirect, got HTTP %d", pkgName, resp.StatusCode)
 	}

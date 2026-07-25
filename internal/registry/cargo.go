@@ -35,7 +35,7 @@ func (c *Cargo) LatestVersion(ctx context.Context, pkgName string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("crates.io %s: %w", pkgName, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("crates.io %s: HTTP %d", pkgName, resp.StatusCode)
 	}

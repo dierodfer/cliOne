@@ -29,7 +29,7 @@ func testApp(t *testing.T) *App {
 		Resolver: source.NewResolver(),
 		Registry: registry.Default(),
 	}
-	return NewApp(s)
+	return NewApp(s, "test")
 }
 
 func syntheticCats() []model.CategoryState {

@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/dierodfer6/cliOne/internal/scan"
 )
 
 // doctorLines builds the doctor view content as individual lines so it can be
@@ -12,25 +14,19 @@ import (
 func (a *App) doctorLines() []string {
 	lines := []string{doctorHeading.Render(" Doctor — PATH conflicts"), ""}
 
-	found := false
-	for _, cs := range a.cats {
-		for _, ts := range cs.Tools {
-			if len(ts.Source.AllPaths) <= 1 {
-				continue
+	conflicts := scan.Conflicts(a.cats)
+	for _, c := range conflicts {
+		lines = append(lines, " "+categoryStyle.Render(c.Tool.Name))
+		for i, p := range c.AllPaths {
+			if i == 0 {
+				lines = append(lines, "   "+activePath.Render("● "+p+"  (active — first on $PATH)"))
+			} else {
+				lines = append(lines, "   "+shadowedPath.Render("○ "+p+"  (shadowed)"))
 			}
-			found = true
-			lines = append(lines, " "+categoryStyle.Render(ts.Def.Name))
-			for i, p := range ts.Source.AllPaths {
-				if i == 0 {
-					lines = append(lines, "   "+activePath.Render("● "+p+"  (active — first on $PATH)"))
-				} else {
-					lines = append(lines, "   "+shadowedPath.Render("○ "+p+"  (shadowed)"))
-				}
-			}
-			lines = append(lines, "")
 		}
+		lines = append(lines, "")
 	}
-	if !found {
+	if len(conflicts) == 0 {
 		lines = append(lines, dimStyle.Render("  no PATH conflicts detected: every tool resolves at a single location"))
 	}
 	return lines
