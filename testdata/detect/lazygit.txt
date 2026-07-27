@@ -1,0 +1,1 @@
+commit=abc, build date=2024-01-01, build source=binaryRelease, version=0.40.2, os=linux, arch=amd64

@@ -1,0 +1,44 @@
+name: Release
+
+# Fires when a release is published through the GitHub UI (draft releases,
+# and edits to an existing release, do not trigger `published`). Attaches
+# cross-compiled binaries to the release that was just created — it never
+# calls `gh release create`, since the release already exists.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  attach-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build cross-platform binaries
+        run: |
+          set -euo pipefail
+          VERSION="${{ github.event.release.tag_name }}"
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            outdir="dist/clione_${GOOS}_${GOARCH}"
+            mkdir -p "$outdir"
+            GOOS="$GOOS" GOARCH="$GOARCH" go build \
+              -ldflags "-X main.version=${VERSION}" \
+              -o "${outdir}/clione" ./cmd/clione
+            tar -C "$outdir" -czf "dist/clione_${GOOS}_${GOARCH}.tar.gz" clione
+          done
+          (cd dist && sha256sum ./*.tar.gz > checksums.txt)
+
+      - name: Attach binaries to the release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.tar.gz dist/checksums.txt

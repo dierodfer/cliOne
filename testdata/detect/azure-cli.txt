@@ -1,0 +1,7 @@
+azure-cli                         2.55.0
+
+core                              2.55.0
+telemetry                          1.1.0
+
+Python location '/opt/az/bin/python3'
+Extensions directory '/home/user/.azure/cliextensions'
