@@ -1,0 +1,83 @@
+go.mod
+  s_0d0fa6b2da0673::t_5cb67302d615a5 3,9,15,18-19,21-22,24,30
+go.sum
+  s_0d0fa6b2da0673::t_bee5ef393d405b 7-8,11-12,17-20,23-26,29-30,44-45
+internal/registry/registry_test.go
+  s_0cb4fd9c7d1a98::t_5362537cc6d995 157-192
+cmd/clione/main.go
+  s_0cb4fd9c7d1a98::t_6347aad8fac1e5 3-5,38
+internal/catalog/catalog_test.go
+  s_0cb4fd9c7d1a98::t_801e7fb51bd07e 36-42,48-49,51-52,54
+internal/catalog/data/tools.yaml
+  s_0cb4fd9c7d1a98::t_36f7d04613a866 35-37,42,58,69,75-76,82-83,89-92,98-100,107-108,114-115,120-123,128-129,134-135,141,147,157,163-164,170-171,177,183,190,195,201,207,213,219,225,231,238,244,251-252,258,264,270-271,278
+internal/catalog/validate.go
+  s_0cb4fd9c7d1a98::t_16cd4425cbb579 6,95-110
+internal/cli/list.go
+  s_0cb4fd9c7d1a98::t_abd6ae2352afef 1-4
+internal/detect/detect.go
+  s_0cb4fd9c7d1a98::t_936cf0a8e10b80 6,20-29,53,55-57,59-63
+internal/detect/detect_test.go
+  s_0cb4fd9c7d1a98::t_fe7ed315249842 35,122-168
+internal/model/source_kind.go
+  s_0cb4fd9c7d1a98::t_7b83832a4e5982 3-7,18,25,34-35,42-80
+internal/model/source_kind_test.go
+  s_0cb4fd9c7d1a98::t_8df17cc178fb3c 1,4-5,8-23,27-34,36-37,39-46,48-52
+internal/model/tool.go
+  s_0cb4fd9c7d1a98::t_87858bca16db8f 16-27,45-51
+internal/registry/brew.go
+  s_0cb4fd9c7d1a98::t_f5c00b2cb07471 46-51,56-57,59-62
+internal/registry/github_release.go
+  s_0cb4fd9c7d1a98::t_dbf19d1752c462 20
+internal/registry/registry.go
+  s_0cb4fd9c7d1a98::t_bbb6458c78e8fe 2,7,38-45,47-51
+internal/scan/refresh.go
+  s_0cb4fd9c7d1a98::t_733d1e840c60da 50-65,72-76,78-83,93-102
+internal/scan/scanner_test.go
+  s_0cb4fd9c7d1a98::t_ab6e2b00fbbc06 22,26-27
+internal/scan/versionsource.go
+  s_0cb4fd9c7d1a98::t_1d54091d7f13d4 1,7-9,15-19,22-48,51-53,56-58,60
+internal/scan/versionsource_test.go
+  s_0cb4fd9c7d1a98::t_165bd94e685588 1,5-6,16-27,31-32,36-42,44-48,50-51,55-97,100-124,127-139,141-142,144-147,149,151-153,155-156,160-165,167,169-171,173-174,178-180,182-184,186,188-193,195-202
+internal/source/prefixes.go
+  s_0cb4fd9c7d1a98::t_d87c9fec65721b 10-13,15-17,30-43,53-58
+internal/source/source_test.go
+  s_0cb4fd9c7d1a98::t_4d7c6fc0136626 69-71,81-89
+internal/tui/app.go
+  s_0cb4fd9c7d1a98::t_43e17a6bfcb1fe 2-4,35,232,263-264,329-350,414,499-501
+internal/tui/app_test.go
+  s_0cb4fd9c7d1a98::t_0505631b9d8c04 288,291-298,300,302,304-305,309,313,317-318,320-329
+internal/tui/keys.go
+  s_0cb4fd9c7d1a98::t_593815e1af5c4a 21
+internal/tui/rowaction.go
+  s_0cb4fd9c7d1a98::t_4f1522cf444a05 13-15,17,20-23
+internal/tui/styles.go
+  s_0cb4fd9c7d1a98::t_bd4139f621e036 72-106
+internal/tui/tree.go
+  s_0cb4fd9c7d1a98::t_5915224a2c8157 121
+testdata/detect/copilot.txt
+  s_0cb4fd9c7d1a98::t_f04d473d675c8b 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "89d77604297e96b975fb70fe431e50951cfeeeff",
+  "prompts": {},
+  "sessions": {
+    "s_0cb4fd9c7d1a98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4f3cb59-8b1b-4e37-9f8c-15620cee8287",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Diego Rodriguez <dierodfer6@gmail.com>"
+    },
+    "s_0d0fa6b2da0673": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "165ab11e-19a3-42dc-9e39-2debbfea6ac7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Diego Rodriguez <dierodfer6@gmail.com>"
+    }
+  }
+}
