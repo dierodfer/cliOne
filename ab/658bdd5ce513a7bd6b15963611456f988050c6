@@ -1,0 +1,21 @@
+internal/catalog/validate.go
+  s_0cb4fd9c7d1a98::t_a700fac9f29b35 76-77,88-89,91-92,94-95,97-107,111-138
+internal/tui/app_test.go
+  s_0cb4fd9c7d1a98::t_d68418c549dafe 317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ab658bdd5ce513a7bd6b15963611456f988050c6",
+  "prompts": {},
+  "sessions": {
+    "s_0cb4fd9c7d1a98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4f3cb59-8b1b-4e37-9f8c-15620cee8287",
+        "model": "unknown"
+      },
+      "human_author": "Diego Rodriguez <dierodfer6@gmail.com>"
+    }
+  }
+}
