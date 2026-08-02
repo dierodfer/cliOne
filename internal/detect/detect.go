@@ -3,6 +3,7 @@
 package detect
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os/exec"
@@ -16,8 +17,16 @@ import (
 // Timeout bounds each detect command so a hung tool never blocks the TUI.
 const Timeout = 5 * time.Second
 
-// RunDetect executes the tool's detect command and extracts the version from
-// its combined stdout+stderr using the tool's regex.
+// RunDetect executes the tool's detect command and extracts the version using
+// the tool's regex.
+//
+// stdout and stderr are matched separately, stdout first: many CLIs (npm,
+// AI-assistant wrappers, etc.) print an unrelated "update available" banner
+// to stderr ahead of the real version, and an unanchored regex run against
+// combined output would happily latch onto the banner's version number
+// instead of the tool's actual installed version. Falling back to stderr
+// only when stdout has no match still supports tools like `java -version`
+// that report their version on stderr alone.
 //
 // A missing binary yields Installed=false with no error: that is a normal
 // state, not a failure. Other execution problems (timeout, non-regex-matching
@@ -41,12 +50,17 @@ func RunDetect(ctx context.Context, def model.ToolDef) (model.DetectResult, erro
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, fields[0], fields[1:]...)
-	out, runErr := cmd.CombinedOutput()
-	raw := string(out)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	runErr := cmd.Run()
 
-	res := ExtractVersion(re, raw)
-	res.RawOutput = raw
+	res := ExtractVersion(re, stdout.String())
+	if !res.Installed {
+		res = ExtractVersion(re, stderr.String())
+	}
+	res.RawOutput = stdout.String() + stderr.String()
 	// The binary is on PATH, so it counts as installed even when the version
 	// could not be parsed; surface the problem via Err instead.
 	if !res.Installed {

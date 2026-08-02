@@ -50,7 +50,3 @@ func (n *Npm) LatestVersion(ctx context.Context, pkgName string) (string, error)
 	}
 	return normalizeVersion(payload.Version), nil
 }
-
-func (n *Npm) UpdateCommand(pkgName string) []string {
-	return []string{"npm", "install", "-g", pkgName}
-}

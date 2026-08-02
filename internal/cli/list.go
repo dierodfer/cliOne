@@ -1,7 +1,7 @@
-// Package cli implements clione's non-interactive subcommands (list, doctor,
-// update). They exist alongside the TUI, not instead of it: each one is a
-// thin, testable wrapper over the same internal/scan and internal/updater
-// logic the TUI already uses, so behavior never diverges between the two.
+// Package cli implements clione's non-interactive subcommands (list, doctor).
+// They exist alongside the TUI, not instead of it: each one is a thin,
+// testable wrapper over the same internal/scan logic the TUI already uses, so
+// behavior never diverges between the two.
 package cli
 
 import (

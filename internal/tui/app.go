@@ -1,6 +1,7 @@
 // Package tui implements the CLIOne terminal user interface: a collapsible
-// tree of tool categories with per-row update actions, a doctor view, inline
-// error panels, and profile/text filtering.
+// tree of tool categories showing installed vs. latest versions, a doctor
+// view, and profile/text filtering. It reports versions only and never
+// installs or upgrades anything.
 package tui
 
 import (
@@ -9,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/dierodfer6/cliOne/internal/detect"
 	"github.com/dierodfer6/cliOne/internal/model"
 	"github.com/dierodfer6/cliOne/internal/scan"
 )
@@ -33,17 +32,13 @@ type App struct {
 	cats     []model.CategoryState
 	profiles []model.Profile
 
-	keys    keyMap
-	spinner spinner.Model
+	keys keyMap
 
 	mode         viewMode
 	cursor       int
 	scroll       int             // index of the first tree row rendered (viewport top)
 	doctorScroll int             // index of the first doctor line rendered (viewport top)
 	expanded     map[string]bool // category ID -> open
-	updating     map[string]bool // tool ID -> update running
-	updateErrs   map[string]model.UpdateResult
-	errOpen      map[string]bool // tool ID -> error panel open
 
 	refreshPending int // outstanding versionDoneMsg replies from a manual `r` refresh
 
@@ -70,16 +65,11 @@ func Run(version string) error {
 
 // NewApp builds the initial model. Exposed for tests.
 func NewApp(scanner *scan.Scanner, version string) *App {
-	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot))
 	a := &App{
 		scanner:    scanner,
 		version:    version,
 		keys:       defaultKeyMap(),
-		spinner:    sp,
 		expanded:   map[string]bool{},
-		updating:   map[string]bool{},
-		updateErrs: map[string]model.UpdateResult{},
-		errOpen:    map[string]bool{},
 		profileIdx: -1,
 	}
 	if scanner != nil && scanner.Catalog != nil {
@@ -111,13 +101,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.noteRefreshDone()
 		return a, nil
 
-	case detectDoneMsg:
-		a.setDetect(msg.toolID, msg.result)
-		return a, nil
-
-	case updateDoneMsg:
-		return a, a.applyUpdateResult(msg)
-
 	case openURLDoneMsg:
 		if msg.err != nil {
 			a.status = "could not open browser: " + msg.err.Error()
@@ -125,14 +108,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.status = "opened official page for " + msg.toolID
 		}
 		return a, nil
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		a.spinner, cmd = a.spinner.Update(msg)
-		if len(a.updating) == 0 {
-			return a, nil // stop ticking when nothing is running
-		}
-		return a, cmd
 
 	case tea.KeyMsg:
 		return a.handleKey(msg)
@@ -254,7 +229,7 @@ func (a *App) handleTreeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.cursor++
 		a.clampCursor(rows)
 
-	case key.Matches(msg, a.keys.Enter), key.Matches(msg, a.keys.Update):
+	case key.Matches(msg, a.keys.Enter):
 		return a, a.activateRow(rows)
 
 	case key.Matches(msg, a.keys.Back):
@@ -262,11 +237,6 @@ func (a *App) handleTreeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, a.keys.Filter):
 		a.filtering = true
-
-	case key.Matches(msg, a.keys.Log):
-		if r, ok := a.rowAtCursor(rows); ok && !r.isCategory {
-			a.toggleErrorPanel(r.toolID)
-		}
 
 	case key.Matches(msg, a.keys.Doctor):
 		a.mode = modeDoctor
@@ -290,7 +260,8 @@ func (a *App) rowAtCursor(rows []row) (row, bool) {
 	return rows[a.cursor], true
 }
 
-// activateRow handles enter/u: category rows toggle open, tool rows act.
+// activateRow handles enter: category rows toggle open, tool rows open their
+// official page.
 func (a *App) activateRow(rows []row) tea.Cmd {
 	r, ok := a.rowAtCursor(rows)
 	if !ok {
@@ -355,7 +326,28 @@ func (a *App) View() string {
 	if a.status != "" {
 		statusLine = statusStyle.Render(a.status) + "\n"
 	}
-	return a.headerBar() + "\n\n" + panel + "\n\n" + statusLine + a.footerBar() + "\n"
+	legendLine := ""
+	if legend := a.legendBar(); legend != "" {
+		legendLine = legend + "\n"
+	}
+	return a.headerBar() + "\n\n" + panel + "\n\n" + statusLine + legendLine + a.footerBar() + "\n"
+}
+
+// legendBar decodes the per-manager colors used by the [source] tag on each
+// tool row. The doctor view has no source tags, so it gets no legend.
+func (a *App) legendBar() string {
+	if a.mode == modeDoctor {
+		return ""
+	}
+	var parts []string
+	for _, k := range legendKinds {
+		parts = append(parts, sourceKindStyle(k).Render("●")+" "+keyLabelStyle.Render(k.String()))
+	}
+	line := " " + navHintStyle.Render("source:") + "  " + strings.Join(parts, "  ")
+	if a.width > 0 {
+		line = ansi.Truncate(line, a.width, "…")
+	}
+	return line
 }
 
 // headerBar renders the top line: brand + tool count + profile/filter on the
@@ -419,7 +411,7 @@ func scrollIndicator(scroll, h, total int) (string, bool) {
 func (a *App) footerBar() string {
 	hints := []struct{ key, label string }{
 		{"↑/↓", "Navigate"},
-		{"enter/u", "Update"},
+		{"enter", "Open page"},
 		{"/", "Filter"},
 		{"p", "Profile"},
 		{"d", "Doctor"},
@@ -504,6 +496,9 @@ func (a *App) treeBodyHeight() int {
 	if a.status != "" {
 		reserved++
 	}
+	if a.mode != modeDoctor {
+		reserved++ // source-color legend, rendered above the footer
+	}
 	h := a.height - reserved
 	if h < 1 {
 		h = 1
@@ -536,15 +531,6 @@ func (a *App) ensureVisible(rows []row) {
 func (a *App) setLatest(toolID string, res model.VersionResult) {
 	a.mutateTool(toolID, func(ts *model.ToolState) {
 		ts.Latest = res
-		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest)
-	})
-}
-
-// setDetect updates one tool's detection result (post-update re-detect),
-// recomputes its status, and refreshes the category installed count.
-func (a *App) setDetect(toolID string, res model.DetectResult) {
-	a.mutateTool(toolID, func(ts *model.ToolState) {
-		ts.Detect = res
 		ts.Status = scan.ComputeStatus(ts.Def, ts.Detect, ts.Source, ts.Latest)
 	})
 }
@@ -582,7 +568,3 @@ func (a *App) findTool(toolID string) (model.ToolState, bool) {
 	return model.ToolState{}, false
 }
 
-// detectRun re-runs detection for one tool definition.
-func detectRun(def model.ToolDef) (model.DetectResult, error) {
-	return detect.RunDetect(context.Background(), def)
-}

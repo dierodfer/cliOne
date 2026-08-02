@@ -26,9 +26,6 @@ func TestCargoLatestVersion(t *testing.T) {
 	if v != "14.1.0" {
 		t.Fatalf("got %q, want 14.1.0", v)
 	}
-	if got := c.UpdateCommand("ripgrep"); len(got) != 4 || got[0] != "cargo" || got[1] != "install" || got[2] != "ripgrep" || got[3] != "--force" {
-		t.Fatalf("unexpected update command %v", got)
-	}
 }
 
 func TestCargoNotFound(t *testing.T) {
@@ -57,9 +54,6 @@ func TestNpmLatestVersion(t *testing.T) {
 	}
 	if v != "10.9.7" {
 		t.Fatalf("got %q, want 10.9.7", v)
-	}
-	if got := n.UpdateCommand("npm"); len(got) != 4 || got[3] != "npm" {
-		t.Fatalf("unexpected update command %v", got)
 	}
 }
 
@@ -109,9 +103,6 @@ func TestGitHubReleaseLatestVersionViaRedirect(t *testing.T) {
 	}
 	if v != "0.60.3" {
 		t.Fatalf("got %q, want 0.60.3 (leading v stripped)", v)
-	}
-	if g.UpdateCommand("junegunn/fzf") != nil {
-		t.Fatal("github release manager must not synthesize an update command")
 	}
 }
 
@@ -163,11 +154,42 @@ func TestBrewLatestVersionWithInjectedRunner(t *testing.T) {
 	}
 }
 
-func TestBrewUpdateCommand(t *testing.T) {
-	b := NewBrew()
-	got := b.UpdateCommand("jq")
-	if len(got) != 3 || got[0] != "brew" || got[1] != "upgrade" || got[2] != "jq" {
-		t.Fatalf("unexpected update command %v", got)
+func TestBrewLatestVersionFromCask(t *testing.T) {
+	// GUI-app tools like vscode/temurin are distributed as Homebrew casks,
+	// not formulae; `brew info --json=v2` reports these under "casks" with
+	// the version given directly rather than nested under "versions".
+	b := &Brew{Run: func(_ context.Context, name string, args ...string) ([]byte, error) {
+		if name != "brew" {
+			t.Fatalf("unexpected command %s", name)
+		}
+		return []byte(`{"formulae":[],"casks":[{"token":"visual-studio-code","version":"1.85.1"}]}`), nil
+	}}
+	v, err := b.LatestVersion(context.Background(), "visual-studio-code")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.85.1" {
+		t.Fatalf("got %q, want 1.85.1", v)
+	}
+}
+
+func TestNormalizeVersionStripsProjectTagPrefixes(t *testing.T) {
+	// Release tags carry project-specific prefixes. Left in place they break
+	// numeric comparison, which reads as "up to date" instead of "outdated".
+	cases := map[string]string{
+		"v1.2.3":           "1.2.3",
+		"1.2.3":            "1.2.3",
+		"jq-1.8.2":         "1.8.2",
+		"azure-cli-2.88.0": "2.88.0",
+		"Helm v4.2.3":      "4.2.3",
+		"  v0.60.3  ":      "0.60.3",
+		"jdk-25.0.4+7":     "25.0.4",
+		"no-digits-at-all": "no-digits-at-all",
+	}
+	for in, want := range cases {
+		if got := normalizeVersion(in); got != want {
+			t.Errorf("normalizeVersion(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

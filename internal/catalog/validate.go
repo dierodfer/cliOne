@@ -3,6 +3,7 @@ package catalog
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/dierodfer6/cliOne/internal/model"
 )
@@ -91,8 +92,22 @@ func validateTool(t model.ToolDef, catIDs map[string]bool) error {
 	if n := re.NumSubexp(); n != 1 {
 		return fmt.Errorf("catalog: tool %q detect.regex must have exactly one capture group, has %d", t.ID, n)
 	}
-	if t.Update != nil && t.Update.Cmd == "" {
-		return fmt.Errorf("catalog: tool %q has an update block with empty cmd", t.ID)
+	if t.Repo != "" {
+		if parts := strings.Split(t.Repo, "/"); len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return fmt.Errorf("catalog: tool %q repo must be \"org/repo\", got %q", t.ID, t.Repo)
+		}
+	}
+	if t.VersionSource != nil {
+		if t.VersionSource.URL == "" {
+			return fmt.Errorf("catalog: tool %q has a version_source block with empty url", t.ID)
+		}
+		vre, err := regexp.Compile(t.VersionSource.Regex)
+		if err != nil {
+			return fmt.Errorf("catalog: tool %q version_source.regex does not compile: %v", t.ID, err)
+		}
+		if n := vre.NumSubexp(); n != 1 {
+			return fmt.Errorf("catalog: tool %q version_source.regex must have exactly one capture group, has %d", t.ID, n)
+		}
 	}
 	return nil
 }

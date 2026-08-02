@@ -32,11 +32,14 @@ tools:
     name: Git
     category: git
     detect: {cmd: "git --version", regex: 'git version (\d+\.\d+\.\d+)'}
+    # git-scm.com renders its version client-side, so the upstream tag feed is
+    # the fetchable authority.
+    version_source: {url: "https://github.com/git/git/tags.atom", regex: '<title>v(\d+\.\d+\.\d+)</title>'}
     official_url: "https://git-scm.com/downloads"
   - id: fzf
     name: fzf
     category: utilities
-    detect: {cmd: "fzf --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "fzf --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/junegunn/fzf"
   - id: ripgrep
     name: ripgrep
@@ -52,6 +55,7 @@ tools:
     name: jq
     category: utilities
     detect: {cmd: "jq --version", regex: 'jq-(\d+\.\d+(?:\.\d+)?)'}
+    repo: "jqlang/jq"
     official_url: "https://jqlang.github.io/jq/"
   - id: yq
     name: yq
@@ -62,66 +66,85 @@ tools:
     name: Homebrew
     category: package_managers
     detect: {cmd: "brew --version", regex: 'Homebrew (\d+\.\d+\.\d+)'}
-    update: {cmd: "brew update"}
+    repo: "Homebrew/brew"
     official_url: "https://brew.sh"
   - id: rustup
     name: "Rust (rustup)"
     category: languages
     detect: {cmd: "rustc --version", regex: 'rustc (\d+\.\d+\.\d+)'}
-    update: {cmd: "rustup update"}
+    # Detection reads rustc, so the toolchain repo — not rustup — is upstream.
+    repo: "rust-lang/rust"
     official_url: "https://www.rust-lang.org/tools/install"
   - id: node
     name: Node.js
     category: languages
     detect: {cmd: "node --version", regex: 'v(\d+\.\d+\.\d+)'}
+    # nodejs.org's dist index lists every release newest-first.
+    version_source: {url: "https://nodejs.org/dist/index.json", regex: '"version":"v(\d+\.\d+\.\d+)"'}
     official_url: "https://nodejs.org"
   - id: go
     name: Go
     category: languages
     detect: {cmd: "go version", regex: 'go version go(\d+\.\d+(?:\.\d+)?)'}
+    # go.dev/VERSION is the release endpoint the Go toolchain itself uses; it
+    # answers with the current release on the first line ("go1.24.7") followed
+    # by a build timestamp line, which the regex ignores.
+    version_source: {url: "https://go.dev/VERSION?m=text", regex: 'go(\d+\.\d+(?:\.\d+)?)'}
     official_url: "https://go.dev/dl/"
   - id: python
     name: Python
     category: languages
     detect: {cmd: "python3 --version", regex: 'Python (\d+\.\d+\.\d+)'}
+    # python.org renders its version client-side. Requiring the closing tag
+    # keeps prerelease tags like v3.15.0a1 from matching as "3.15.0".
+    version_source: {url: "https://github.com/python/cpython/tags.atom", regex: '<title>v(\d+\.\d+\.\d+)</title>'}
     official_url: "https://www.python.org/downloads/"
   - id: java
     name: "Java (Temurin)"
     category: languages
     package_name: "temurin"
     detect: {cmd: "java -version", regex: 'version "(\d+\.\d+\.\d+)'}
+    # Adoptium's API, filtered to the newest GA release of the current LTS.
+    version_source: {url: "https://api.adoptium.net/v3/info/release_names?release_type=ga&version=%5B25%2C26%29&page_size=1&sort_method=DATE&sort_order=DESC", regex: 'jdk-(\d+\.\d+\.\d+)'}
     official_url: "https://adoptium.net"
   - id: dotnet
     name: ".NET SDK"
     category: languages
     package_name: "dotnet-sdk"
-    detect: {cmd: "dotnet --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "dotnet --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    version_source: {url: "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json", regex: '"latest-sdk": "(\d+\.\d+\.\d+)"'}
     official_url: "https://dotnet.microsoft.com/download"
   - id: npm
     name: npm
     category: package_managers
-    detect: {cmd: "npm --version", regex: '(\d+\.\d+\.\d+)'}
-    update: {cmd: "npm install -g npm"}
+    detect: {cmd: "npm --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    # The registry doc's key order is not stable, so match npm's own _id
+    # rather than the first "version" field that happens to appear.
+    version_source: {url: "https://registry.npmjs.org/npm/latest", regex: '"_id":"npm@(\d+\.\d+\.\d+)"'}
     official_url: "https://www.npmjs.com"
   - id: pnpm
     name: pnpm
     category: package_managers
-    detect: {cmd: "pnpm --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "pnpm --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    repo: "pnpm/pnpm"
     official_url: "https://pnpm.io"
   - id: yarn
     name: Yarn
     category: package_managers
-    detect: {cmd: "yarn --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "yarn --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    repo: "yarnpkg/berry"
     official_url: "https://yarnpkg.com"
   - id: poetry
     name: Poetry
     category: package_managers
     detect: {cmd: "poetry --version", regex: 'version (\d+\.\d+\.\d+)'}
+    repo: "python-poetry/poetry"
     official_url: "https://python-poetry.org"
   - id: gh
     name: "GitHub CLI"
     category: git
     detect: {cmd: "gh --version", regex: 'gh version (\d+\.\d+\.\d+)'}
+    repo: "cli/cli"
     official_url: "https://cli.github.com"
   - id: lazygit
     name: Lazygit
@@ -131,110 +154,126 @@ tools:
   - id: copilot
     name: "GitHub Copilot CLI"
     category: ai
-    detect: {cmd: "copilot --version", regex: 'v?(\d+\.\d+\.\d+)'}
-    update: {cmd: "copilot update"}
+    detect: {cmd: "copilot --version", regex: 'Copilot CLI\s+v?(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/github/copilot-cli"
   - id: claude-code
     name: "Claude Code"
     category: ai
     package_name: "@anthropic-ai/claude-code"
-    detect: {cmd: "claude --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "claude --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    version_source: {url: "https://registry.npmjs.org/@anthropic-ai/claude-code/latest", regex: '"_id":"@anthropic-ai/claude-code@(\d+\.\d+\.\d+)"'}
     official_url: "https://docs.claude.com/en/docs/claude-code/overview"
   - id: opencode
     name: OpenCode
     category: ai
     package_name: "opencode-ai"
-    detect: {cmd: "opencode --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "opencode --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    version_source: {url: "https://registry.npmjs.org/opencode-ai/latest", regex: '"_id":"opencode-ai@(\d+\.\d+\.\d+)"'}
     official_url: "https://opencode.ai"
   - id: codex
     name: "OpenAI Codex CLI"
     category: ai
     package_name: "@openai/codex"
-    detect: {cmd: "codex --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "codex --version", regex: 'codex-cli\s+(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/openai/codex"
   - id: gemini
     name: "Gemini CLI"
     category: ai
     package_name: "@google/gemini-cli"
-    detect: {cmd: "gemini --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "gemini --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/google-gemini/gemini-cli"
   - id: aider
     name: Aider
     category: ai
     package_name: "aider-chat"
     detect: {cmd: "aider --version", regex: 'aider (\d+\.\d+\.\d+)'}
+    repo: "Aider-AI/aider"
     official_url: "https://aider.chat"
   - id: kubectx
     name: kubectx
     category: kubernetes
-    detect: {cmd: "kubectx --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "kubectx --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
     official_url: "https://github.com/ahmetb/kubectx"
   - id: helm
     name: Helm
     category: kubernetes
     detect: {cmd: "helm version --short", regex: 'v(\d+\.\d+\.\d+)'}
+    repo: "helm/helm"
     official_url: "https://helm.sh"
   - id: k9s
     name: k9s
     category: kubernetes
     detect: {cmd: "k9s version", regex: 'v(\d+\.\d+\.\d+)'}
+    repo: "derailed/k9s"
     official_url: "https://k9scli.io"
   - id: minikube
     name: Minikube
     category: kubernetes
     detect: {cmd: "minikube version", regex: 'v(\d+\.\d+\.\d+)'}
+    repo: "kubernetes/minikube"
     official_url: "https://minikube.sigs.k8s.io"
   - id: docker
     name: Docker
     category: containers
     detect: {cmd: "docker --version", regex: 'Docker version (\d+\.\d+\.\d+)'}
+    version_source: {url: "https://github.com/moby/moby/releases.atom", regex: '<title>v(\d+\.\d+\.\d+)</title>'}
     official_url: "https://docs.docker.com/get-docker/"
   - id: docker-compose
     name: "Docker Compose"
     category: containers
     detect: {cmd: "docker compose version", regex: 'v(\d+\.\d+\.\d+)'}
+    repo: "docker/compose"
     official_url: "https://docs.docker.com/compose/install/"
   - id: podman
     name: Podman
     category: containers
     detect: {cmd: "podman --version", regex: 'version (\d+\.\d+\.\d+)'}
+    version_source: {url: "https://github.com/containers/podman/releases.atom", regex: '<title>v(\d+\.\d+\.\d+)</title>'}
     official_url: "https://podman.io"
   - id: aws-cli
     name: "AWS CLI"
     category: cloud
     package_name: "awscli"
     detect: {cmd: "aws --version", regex: 'aws-cli/(\d+\.\d+\.\d+)'}
+    version_source: {url: "https://github.com/aws/aws-cli/tags.atom", regex: '<title>(\d+\.\d+\.\d+)</title>'}
     official_url: "https://aws.amazon.com/cli/"
   - id: azure-cli
     name: "Azure CLI"
     category: cloud
     detect: {cmd: "az --version", regex: 'azure-cli\s+(\d+\.\d+\.\d+)'}
+    repo: "Azure/azure-cli"
     official_url: "https://learn.microsoft.com/cli/azure/install-azure-cli"
   - id: gcloud
     name: "Google Cloud CLI"
     category: cloud
     package_name: "google-cloud-sdk"
     detect: {cmd: "gcloud --version", regex: 'Google Cloud SDK (\d+\.\d+\.\d+)'}
+    # The release notes lead with the newest SDK version.
+    version_source: {url: "https://cloud.google.com/sdk/docs/release-notes", regex: '(\d{3,}\.\d+\.\d+)'}
     official_url: "https://cloud.google.com/sdk/docs/install"
   - id: terraform
     name: Terraform
     category: infrastructure
     detect: {cmd: "terraform --version", regex: 'Terraform v(\d+\.\d+\.\d+)'}
+    repo: "hashicorp/terraform"
     official_url: "https://developer.hashicorp.com/terraform/downloads"
   - id: vault
     name: Vault
     category: infrastructure
     detect: {cmd: "vault --version", regex: 'Vault v(\d+\.\d+\.\d+)'}
+    repo: "hashicorp/vault"
     official_url: "https://developer.hashicorp.com/vault/downloads"
   - id: vscode
     name: "Visual Studio Code"
     category: editors
     package_name: "visual-studio-code"
-    detect: {cmd: "code --version", regex: '(\d+\.\d+\.\d+)'}
+    detect: {cmd: "code --version", regex: '(?m)^(\d+\.\d+\.\d+)'}
+    version_source: {url: "https://update.code.visualstudio.com/api/update/darwin/stable/latest", regex: '"name":"(\d+\.\d+\.\d+)"'}
     official_url: "https://code.visualstudio.com"
   - id: neovim
     name: Neovim
     category: editors
     package_name: "neovim"
     detect: {cmd: "nvim --version", regex: 'NVIM v(\d+\.\d+\.\d+)'}
+    repo: "neovim/neovim"
     official_url: "https://neovim.io"

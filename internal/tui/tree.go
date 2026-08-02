@@ -62,10 +62,6 @@ func (a *App) renderTree(rows []row) string {
 		}
 		b.WriteString(line)
 		b.WriteByte('\n')
-		if panel := a.errorPanelFor(r); panel != "" {
-			b.WriteString(panel)
-			b.WriteByte('\n')
-		}
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -89,15 +85,6 @@ func (a *App) treeWindow(n int) (start, end int) {
 	return start, end
 }
 
-// errorPanelFor returns the inline error panel for a tool row whose panel the
-// user has opened, or "" when there is nothing to show.
-func (a *App) errorPanelFor(r row) string {
-	if r.isCategory || !a.errOpen[r.toolID] {
-		return ""
-	}
-	return a.renderErrorPanel(r.toolID)
-}
-
 func (a *App) renderRow(r row) string {
 	if r.isCategory {
 		arrow := "▸"
@@ -114,10 +101,6 @@ func (a *App) renderRow(r row) string {
 
 func (a *App) renderToolLine(ts model.ToolState) string {
 	icon := statusIcon(ts.Status)
-	if a.updating[ts.Def.ID] {
-		icon = a.spinner.View()
-	}
-
 	name := fmt.Sprintf("%-22s", ts.Def.Name)
 	var parts []string
 	parts = append(parts, icon, name)
@@ -135,12 +118,8 @@ func (a *App) renderToolLine(ts model.ToolState) string {
 			parts = append(parts, latestStyle.Render("→ v"+ts.Latest.Latest))
 		}
 		if ts.Source.Kind != model.SourceUnknown {
-			parts = append(parts, sourceStyle.Render("["+ts.Source.Kind.String()+"]"))
+			parts = append(parts, sourceKindStyle(ts.Source.Kind).Render("["+ts.Source.Kind.String()+"]"))
 		}
-	}
-
-	if _, failed := a.updateErrs[ts.Def.ID]; failed {
-		parts = append(parts, errStyle.Render("✗ update failed (l: log)"))
 	}
 	return strings.Join(parts, " ")
 }

@@ -57,7 +57,3 @@ func (c *Cargo) LatestVersion(ctx context.Context, pkgName string) (string, erro
 	}
 	return normalizeVersion(v), nil
 }
-
-func (c *Cargo) UpdateCommand(pkgName string) []string {
-	return []string{"cargo", "install", pkgName, "--force"}
-}

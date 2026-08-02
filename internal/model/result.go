@@ -24,39 +24,6 @@ type VersionResult struct {
 	FetchedAt time.Time
 }
 
-// UpdateAction is the routing decision for what pressing enter/u does on a row.
-type UpdateAction int
-
-const (
-	ActionNone UpdateAction = iota
-	ActionRunManagerUpdate
-	ActionRunNativeUpdate
-	ActionOpenOfficialPage
-)
-
-func (a UpdateAction) String() string {
-	switch a {
-	case ActionRunManagerUpdate:
-		return "manager-update"
-	case ActionRunNativeUpdate:
-		return "native-update"
-	case ActionOpenOfficialPage:
-		return "open-official-page"
-	default:
-		return "none"
-	}
-}
-
-// UpdateResult is the outcome of executing an update action.
-type UpdateResult struct {
-	Action   UpdateAction
-	Success  bool
-	ExitCode int
-	Stdout   string
-	Stderr   string
-	Err      error
-}
-
 // ToolState is everything CLIOne knows about one tool at render time.
 type ToolState struct {
 	Def    ToolDef

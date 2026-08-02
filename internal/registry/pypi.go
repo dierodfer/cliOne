@@ -60,7 +60,3 @@ func (p *PyPI) LatestVersion(ctx context.Context, pkgName string) (string, error
 	}
 	return normalizeVersion(payload.Info.Version), nil
 }
-
-func (p *PyPI) UpdateCommand(pkgName string) []string {
-	return []string{"uv", "tool", "upgrade", pkgName}
-}
