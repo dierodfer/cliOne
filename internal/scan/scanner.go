@@ -8,12 +8,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dierodfer6/cliOne/internal/cache"
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/detect"
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
-	"github.com/dierodfer6/cliOne/internal/source"
+	"github.com/dierodfer/cliOne/internal/cache"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/detect"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/source"
 )
 
 // Scanner holds the wired dependencies for a scan.

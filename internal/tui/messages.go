@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/scan"
 )
 
 // scanDoneMsg carries the initial full scan result.

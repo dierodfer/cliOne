@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // fixtureVersions maps tool ID -> version expected from testdata/detect/<id>.txt.

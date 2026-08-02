@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const (
-	versionSourceUserAgent = "clione/0.1 (+https://github.com/dierodfer6/cliOne)"
+	versionSourceUserAgent = "clione/0.1 (+https://github.com/dierodfer/cliOne)"
 	// Bound a single body read so a misconfigured URL pointing at something
 	// huge cannot balloon memory; release endpoints are a few bytes to a few
 	// hundred KB of HTML at most.

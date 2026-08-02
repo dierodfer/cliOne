@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/registry"
 )
 
 func TestFetchVersionSourceExtractsFromPlainText(t *testing.T) {

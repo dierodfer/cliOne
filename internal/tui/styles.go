@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 var (

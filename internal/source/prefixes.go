@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Prefix maps a filesystem path fragment to the package manager that owns

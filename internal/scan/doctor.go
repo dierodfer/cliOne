@@ -1,6 +1,6 @@
 package scan
 
-import "github.com/dierodfer6/cliOne/internal/model"
+import "github.com/dierodfer/cliOne/internal/model"
 
 // Conflict is one tool whose binary resolves at more than one location on
 // $PATH.

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/cache"
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/cache"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/registry"
 )
 
 func TestRefreshFuncsForceIgnoresFreshCache(t *testing.T) {

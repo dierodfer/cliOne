@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // mkExe creates an executable file at dir/name and returns its path.

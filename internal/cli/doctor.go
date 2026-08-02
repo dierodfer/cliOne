@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dierodfer6/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/scan"
 )
 
 // Doctor prints every tool that resolves at more than one location on

@@ -5,7 +5,7 @@ package cache
 import (
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Default TTLs. Source ownership changes rarely (7 days); latest versions go

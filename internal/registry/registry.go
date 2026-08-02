@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Manager is a package-manager adapter. New managers can be added without

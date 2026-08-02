@@ -3,7 +3,7 @@ package tui
 import (
 	"strings"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // filterText returns the active text filter (typed after `/`).

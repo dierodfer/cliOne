@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Brew resolves latest versions via the local brew CLI (`brew info --json=v2`,

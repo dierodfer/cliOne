@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Timeout bounds each detect command so a hung tool never blocks the TUI.

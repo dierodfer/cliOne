@@ -1,4 +1,4 @@
-module github.com/dierodfer6/cliOne
+module github.com/dierodfer/cliOne
 
 go 1.25.0
 

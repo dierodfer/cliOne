@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const (
 	pypiBaseURL = "https://pypi.org"
-	userAgent   = "clione/0.1 (+https://github.com/dierodfer6/cliOne)"
+	userAgent   = "clione/0.1 (+https://github.com/dierodfer/cliOne)"
 )
 
 func defaultHTTPClient() *http.Client {

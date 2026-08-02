@@ -3,7 +3,7 @@ package scan
 import (
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 func TestComputeStatus(t *testing.T) {

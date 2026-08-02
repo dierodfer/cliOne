@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/cli"
-	"github.com/dierodfer6/cliOne/internal/scan"
-	"github.com/dierodfer6/cliOne/internal/tui"
+	"github.com/dierodfer/cliOne/internal/cli"
+	"github.com/dierodfer/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/tui"
 )
 
 var version = "dev"

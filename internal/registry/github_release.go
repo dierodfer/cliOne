@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const githubBaseURL = "https://github.com"

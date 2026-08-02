@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // validate enforces the catalog schema rules, naming the offending tool ID in

@@ -14,8 +14,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/scan"
 )
 
 type viewMode int

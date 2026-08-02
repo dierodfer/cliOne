@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/dierodfer6/cliOne/internal/model"
+import "github.com/dierodfer/cliOne/internal/model"
 
 // activeProfile returns the currently selected profile, or ok=false when the
 // selection is "All" (no profile filtering).
