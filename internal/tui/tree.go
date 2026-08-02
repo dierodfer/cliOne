@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // row is one selectable line of the custom collapsible tree: either a
@@ -49,19 +49,7 @@ func (a *App) renderTree(rows []row) string {
 		return b.String()
 	}
 
-	start, end := 0, len(rows)
-	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
-		start = a.scroll
-		end = start + h
-		if end > len(rows) {
-			end = len(rows)
-			start = end - h
-		}
-		if start < 0 {
-			start = 0
-		}
-	}
-
+	start, end := a.treeWindow(len(rows))
 	inner := a.innerWidth()
 	for i := start; i < end; i++ {
 		r := rows[i]
@@ -74,14 +62,27 @@ func (a *App) renderTree(rows []row) string {
 		}
 		b.WriteString(line)
 		b.WriteByte('\n')
-		if !r.isCategory && a.errOpen[r.toolID] {
-			if panel := a.renderErrorPanel(r.toolID); panel != "" {
-				b.WriteString(panel)
-				b.WriteByte('\n')
-			}
-		}
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// treeWindow returns the [start, end) row range to draw for a tree of n rows,
+// clamped to the viewport height. An unknown or ample height renders everything.
+func (a *App) treeWindow(n int) (start, end int) {
+	h := a.treeBodyHeight()
+	if h <= 0 || n <= h {
+		return 0, n
+	}
+	start = a.scroll
+	end = start + h
+	if end > n {
+		end = n
+		start = end - h
+	}
+	if start < 0 {
+		start = 0
+	}
+	return start, end
 }
 
 func (a *App) renderRow(r row) string {
@@ -100,10 +101,6 @@ func (a *App) renderRow(r row) string {
 
 func (a *App) renderToolLine(ts model.ToolState) string {
 	icon := statusIcon(ts.Status)
-	if a.updating[ts.Def.ID] {
-		icon = a.spinner.View()
-	}
-
 	name := fmt.Sprintf("%-22s", ts.Def.Name)
 	var parts []string
 	parts = append(parts, icon, name)
@@ -121,12 +118,8 @@ func (a *App) renderToolLine(ts model.ToolState) string {
 			parts = append(parts, latestStyle.Render("→ v"+ts.Latest.Latest))
 		}
 		if ts.Source.Kind != model.SourceUnknown {
-			parts = append(parts, sourceStyle.Render("["+ts.Source.Kind.String()+"]"))
+			parts = append(parts, sourceKindStyle(ts.Source.Kind).Render("["+ts.Source.Kind.String()+"]"))
 		}
-	}
-
-	if _, failed := a.updateErrs[ts.Def.ID]; failed {
-		parts = append(parts, errStyle.Render("✗ update failed (l: log)"))
 	}
 	return strings.Join(parts, " ")
 }

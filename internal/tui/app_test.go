@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,12 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/dierodfer6/cliOne/internal/cache"
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
-	"github.com/dierodfer6/cliOne/internal/scan"
-	"github.com/dierodfer6/cliOne/internal/source"
+	"github.com/dierodfer/cliOne/internal/cache"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/source"
 )
 
 func testApp(t *testing.T) *App {
@@ -286,69 +285,11 @@ func TestVersionDoneSameVersionStaysGreen(t *testing.T) {
 	}
 }
 
-func TestUpdateFailureShowsErrorAndPanelToggles(t *testing.T) {
+func TestOutdatedRowOpensOfficialPage(t *testing.T) {
 	a := testApp(t)
 	loadSynthetic(t, a)
-	res := model.UpdateResult{
-		Action:   model.ActionRunManagerUpdate,
-		Success:  false,
-		ExitCode: 1,
-		Stderr:   "line1\nline2\npermission denied",
-		Err:      errors.New("exit status 1"),
-	}
-	a.Update(updateDoneMsg{toolID: "ripgrep", result: res})
-	if _, ok := a.updateErrs["ripgrep"]; !ok {
-		t.Fatal("expected error recorded for ripgrep")
-	}
-
-	// Navigate: expand utilities, move onto the ripgrep row, press l.
-	a.expanded["utilities"] = true
-	rows := a.visibleRows()
-	for i, r := range rows {
-		if r.toolID == "ripgrep" {
-			a.cursor = i
-		}
-	}
-	a.Update(keyMsg("l"))
-	out := a.View()
-	if !strings.Contains(out, "permission denied") {
-		t.Fatalf("expected stderr tail in error panel, got:\n%s", out)
-	}
-	if !strings.Contains(out, "✗ update failed") {
-		t.Fatalf("expected inline failure marker, got:\n%s", out)
-	}
-	// Toggle closed.
-	a.Update(keyMsg("l"))
-	if strings.Contains(a.View(), "permission denied") {
-		t.Fatal("panel should close on second l")
-	}
-}
-
-func TestUpdateSuccessTriggersRedetect(t *testing.T) {
-	a := testApp(t)
-	loadSynthetic(t, a)
-	a.updating["ripgrep"] = true
-	_, cmd := a.Update(updateDoneMsg{toolID: "ripgrep", result: model.UpdateResult{Action: model.ActionRunManagerUpdate, Success: true}})
-	if a.updating["ripgrep"] {
-		t.Fatal("spinner flag should clear on completion")
-	}
-	if cmd == nil {
-		t.Fatal("expected a re-detect command after a successful update")
-	}
-	// Simulate the re-detect result coming back with the new version.
-	a.Update(versionDoneMsg{ToolID: "ripgrep", Result: model.VersionResult{Latest: "15.0.0"}})
-	a.Update(detectDoneMsg{toolID: "ripgrep", result: model.DetectResult{Installed: true, Version: "15.0.0"}})
-	ts, _ := a.findTool("ripgrep")
-	if ts.Status != model.StatusUpToDate {
-		t.Fatalf("expected green after re-detect matches latest, got %v", ts.Status)
-	}
-}
-
-func TestYellowWithoutUpdaterOpensPageNotError(t *testing.T) {
-	a := testApp(t)
-	loadSynthetic(t, a)
-	// Outdated (yellow) but manual source with no bespoke updater: acting on it
-	// must open the official page, not attempt (and fail) an update.
+	// CLIOne never installs or upgrades anything: acting on a row — even an
+	// outdated one — only opens the tool's official page.
 	ts := model.ToolState{
 		Def:    model.ToolDef{ID: "manualtool", Name: "ManualTool", OfficialURL: "https://example.com"},
 		Status: model.StatusUpdateAvail,
@@ -357,14 +298,35 @@ func TestYellowWithoutUpdaterOpensPageNotError(t *testing.T) {
 		Latest: model.VersionResult{Latest: "2.0.0"},
 	}
 	cmd := a.actOnTool(ts)
-	if a.updating["manualtool"] {
-		t.Fatal("a yellow row with no updater must not start an update")
-	}
 	if cmd == nil {
 		t.Fatal("expected an open-page command")
 	}
 	if _, ok := cmd().(openURLDoneMsg); !ok {
-		t.Fatal("expected openURLDoneMsg (open official page) for a yellow row without an updater")
+		t.Fatal("expected openURLDoneMsg (open official page)")
+	}
+}
+
+func TestRowWithoutOfficialURLDoesNothing(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	ts := model.ToolState{
+		Def:    model.ToolDef{ID: "nourl", Name: "NoURL"},
+		Status: model.StatusUpdateAvail,
+		Detect: model.DetectResult{Installed: true, Version: "1.0.0"},
+	}
+	if a.actOnTool(ts) != nil {
+		t.Fatal("a row with no official URL has nothing to act on")
+	}
+}
+
+func TestLegendListsEveryPackageManager(t *testing.T) {
+	a := testApp(t)
+	loadSynthetic(t, a)
+	out := a.View()
+	for _, want := range []string{"brew", "cargo", "uv", "npm", "apt/dnf", "manual"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("legend is missing %q, got:\n%s", want, out)
+		}
 	}
 }
 

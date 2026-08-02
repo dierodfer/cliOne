@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // Brew resolves latest versions via the local brew CLI (`brew info --json=v2`,
@@ -43,16 +43,21 @@ func (b *Brew) LatestVersion(ctx context.Context, pkgName string) (string, error
 				Stable string `json:"stable"`
 			} `json:"versions"`
 		} `json:"formulae"`
+		// Casks (GUI apps like vscode, temurin) have no "formulae" entry;
+		// `brew info --json=v2` reports them under "casks" instead, with the
+		// version given directly rather than nested under "versions".
+		Casks []struct {
+			Version string `json:"version"`
+		} `json:"casks"`
 	}
 	if err := json.Unmarshal(out, &payload); err != nil {
 		return "", fmt.Errorf("brew info %s: parsing JSON: %w", pkgName, err)
 	}
-	if len(payload.Formulae) == 0 || payload.Formulae[0].Versions.Stable == "" {
-		return "", fmt.Errorf("brew info %s: no stable version in output", pkgName)
+	if len(payload.Formulae) > 0 && payload.Formulae[0].Versions.Stable != "" {
+		return normalizeVersion(payload.Formulae[0].Versions.Stable), nil
 	}
-	return normalizeVersion(payload.Formulae[0].Versions.Stable), nil
-}
-
-func (b *Brew) UpdateCommand(pkgName string) []string {
-	return []string{"brew", "upgrade", pkgName}
+	if len(payload.Casks) > 0 && payload.Casks[0].Version != "" {
+		return normalizeVersion(payload.Casks[0].Version), nil
+	}
+	return "", fmt.Errorf("brew info %s: no stable version in output", pkgName)
 }

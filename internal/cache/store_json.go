@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // sourceEntry and latestEntry are the on-disk shapes. Errors are never

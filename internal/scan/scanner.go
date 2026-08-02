@@ -5,17 +5,15 @@ package scan
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/dierodfer6/cliOne/internal/cache"
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/detect"
-	"github.com/dierodfer6/cliOne/internal/model"
-	"github.com/dierodfer6/cliOne/internal/registry"
-	"github.com/dierodfer6/cliOne/internal/source"
+	"github.com/dierodfer/cliOne/internal/cache"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/detect"
+	"github.com/dierodfer/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/source"
 )
 
 // Scanner holds the wired dependencies for a scan.
@@ -34,13 +32,18 @@ func New() (*Scanner, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, err := cache.DefaultPath()
-	if err != nil {
-		path = filepath.Join(os.TempDir(), "clione", "cache.json")
+	// With no per-user cache directory there is nowhere private to persist to.
+	// Fall back to an in-memory cache rather than a predictable path under the
+	// shared temp directory, which any local user could pre-create or tamper with.
+	var store cache.Cache
+	if path, err := cache.DefaultPath(); err == nil {
+		store = cache.NewJSONStore(path)
+	} else {
+		store = cache.NewMemoryStore()
 	}
 	return &Scanner{
 		Catalog:  cat,
-		Cache:    cache.NewJSONStore(path),
+		Cache:    store,
 		Resolver: source.NewResolver(),
 		Registry: registry.Default(),
 		GitHub:   registry.NewGitHubRelease(),

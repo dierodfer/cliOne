@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const githubBaseURL = "https://github.com"
@@ -17,8 +17,7 @@ const githubBaseURL = "https://github.com"
 // header instead of following it. This deliberately avoids the GitHub REST
 // API and its 60 req/hr unauthenticated rate limit.
 //
-// pkgName is "org/repo". Manually installed tools have no synthesized update
-// command, so UpdateCommand returns nil.
+// pkgName is "org/repo".
 type GitHubRelease struct {
 	BaseURL string
 	Client  *http.Client
@@ -60,8 +59,6 @@ func (g *GitHubRelease) LatestVersion(ctx context.Context, pkgName string) (stri
 	}
 	return tag, nil
 }
-
-func (g *GitHubRelease) UpdateCommand(string) []string { return nil }
 
 // TagFromLocation extracts the release tag from a .../releases/tag/<tag>
 // redirect Location URL and normalizes a leading "v".

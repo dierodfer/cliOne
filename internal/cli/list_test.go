@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/cache"
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/cli"
-	"github.com/dierodfer6/cliOne/internal/registry"
-	"github.com/dierodfer6/cliOne/internal/scan"
-	"github.com/dierodfer6/cliOne/internal/source"
+	"github.com/dierodfer/cliOne/internal/cache"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/cli"
+	"github.com/dierodfer/cliOne/internal/registry"
+	"github.com/dierodfer/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/source"
 )
 
 func testScanner(t *testing.T, cat *catalog.Catalog) *scan.Scanner {

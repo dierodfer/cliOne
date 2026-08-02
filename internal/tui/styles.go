@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 var (
@@ -17,9 +17,6 @@ var (
 	dimStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	versionStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("111"))
 	latestStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	sourceStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("60"))
-	errStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	panelStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("203")).PaddingLeft(6)
 	statusStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("114")).Padding(0, 1)
 	doctorHeading  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
 	activePath     = lipgloss.NewStyle().Foreground(lipgloss.Color("114"))
@@ -68,6 +65,41 @@ func categoryIcon(catID string) string {
 		return icon
 	}
 	return "📁"
+}
+
+// sourceKindStyles gives each package manager its own color so a row's owner
+// is readable at a glance and matches the legend under the tree. The colors
+// deliberately avoid those already carrying meaning elsewhere: 111 (version),
+// 214 (update-available), 42/203 (status dots), 196 (error), 241/245 (dim).
+var sourceKindStyles = map[model.SourceKind]lipgloss.Style{
+	model.SourceHomebrew:  lipgloss.NewStyle().Foreground(lipgloss.Color("178")), // amber
+	model.SourceCargo:     lipgloss.NewStyle().Foreground(lipgloss.Color("173")), // rust
+	model.SourceUvTool:    lipgloss.NewStyle().Foreground(lipgloss.Color("141")), // violet
+	model.SourceNpmGlobal: lipgloss.NewStyle().Foreground(lipgloss.Color("168")), // rose
+	model.SourceAptDnf:    lipgloss.NewStyle().Foreground(lipgloss.Color("73")),  // teal
+	model.SourceAsdf:      lipgloss.NewStyle().Foreground(lipgloss.Color("108")), // sage
+	model.SourceManual:    lipgloss.NewStyle().Foreground(lipgloss.Color("103")), // slate
+}
+
+// legendKinds is the fixed display order for the source legend, so the row of
+// colors stays stable between renders rather than following map iteration.
+var legendKinds = []model.SourceKind{
+	model.SourceHomebrew,
+	model.SourceCargo,
+	model.SourceUvTool,
+	model.SourceNpmGlobal,
+	model.SourceAptDnf,
+	model.SourceAsdf,
+	model.SourceManual,
+}
+
+// sourceKindStyle returns the color for a package manager, falling back to the
+// muted slate used for manual installs for any kind without its own entry.
+func sourceKindStyle(k model.SourceKind) lipgloss.Style {
+	if s, ok := sourceKindStyles[k]; ok {
+		return s
+	}
+	return sourceKindStyles[model.SourceManual]
 }
 
 // statusIcon renders the 4-state semaphore for a tool row as a colored dot.

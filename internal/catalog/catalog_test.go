@@ -33,19 +33,25 @@ func TestLoadEmbeddedCatalog(t *testing.T) {
 	}
 }
 
-func TestUpdateSpecPresence(t *testing.T) {
+// TestEveryToolHasAnUpstreamSource guards the property the catalog exists to
+// provide: every tool must resolve "latest" from what the project itself
+// publishes — an explicit version_source, a declared repo, or an official_url
+// that is already a GitHub repo. A tool with none of these silently falls back
+// to whichever package manager installed it, which is exactly the stale-latest
+// behavior the version_source mechanism was added to avoid.
+func TestEveryToolHasAnUpstreamSource(t *testing.T) {
 	c, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	withUpdate := map[string]bool{"homebrew": true, "rustup": true, "npm": true, "copilot": true}
 	for _, tool := range c.Tools {
-		if withUpdate[tool.ID] && tool.Update == nil {
-			t.Errorf("tool %q should have an update spec", tool.ID)
+		if tool.VersionSource != nil || tool.Repo != "" {
+			continue
 		}
-		if !withUpdate[tool.ID] && tool.Update != nil {
-			t.Errorf("tool %q should not have an update spec", tool.ID)
+		if strings.HasPrefix(tool.OfficialURL, "https://github.com/") {
+			continue
 		}
+		t.Errorf("tool %q has no upstream version source: add a version_source or repo", tool.ID)
 	}
 }
 

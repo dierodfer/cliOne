@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 func newTestStore(t *testing.T) (*JSONStore, *time.Time) {

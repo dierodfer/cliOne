@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // mkExe creates an executable file at dir/name and returns its path.
@@ -66,6 +66,9 @@ func TestResolveClassifiesByPrefix(t *testing.T) {
 	cargoBin := filepath.Join(home, ".cargo", "bin")
 	uvTools := filepath.Join(home, ".local", "share", "uv", "tools", "sometool", "bin")
 	npmGlobal := filepath.Join(home, ".npm-global", "bin")
+	nvmNodeBin := filepath.Join(home, ".nvm", "versions", "node", "v22.22.2", "bin")
+	asdfShims := filepath.Join(home, ".asdf", "shims")
+	asdfInstalls := filepath.Join(home, ".asdf", "installs", "ivm-node", "24.11.1", "bin")
 
 	cases := []struct {
 		name string
@@ -75,6 +78,15 @@ func TestResolveClassifiesByPrefix(t *testing.T) {
 		{"cargo", cargoBin, model.SourceCargo},
 		{"uv", uvTools, model.SourceUvTool},
 		{"npm-global", npmGlobal, model.SourceNpmGlobal},
+		// nvm installs each Node version under a variable version segment
+		// (v22.22.2 above), which is exactly why global npm packages
+		// installed via nvm used to be misclassified as SourceManual.
+		{"nvm-npm-global", nvmNodeBin, model.SourceNpmGlobal},
+		// asdf puts shims on $PATH; the shims are shell scripts rather than
+		// symlinks, so classification has to recognize the shim directory
+		// itself and never sees ~/.asdf/installs.
+		{"asdf-shim", asdfShims, model.SourceAsdf},
+		{"asdf-install", asdfInstalls, model.SourceAsdf},
 		{"manual", filepath.Join(home, "custom", "bin"), model.SourceManual},
 	}
 

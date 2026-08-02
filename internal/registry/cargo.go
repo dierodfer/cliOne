@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const cratesIOBaseURL = "https://crates.io"
@@ -56,8 +56,4 @@ func (c *Cargo) LatestVersion(ctx context.Context, pkgName string) (string, erro
 		return "", fmt.Errorf("crates.io %s: no version in response", pkgName)
 	}
 	return normalizeVersion(v), nil
-}
-
-func (c *Cargo) UpdateCommand(pkgName string) []string {
-	return []string{"cargo", "install", pkgName, "--force"}
 }

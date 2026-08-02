@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const npmRegistryBaseURL = "https://registry.npmjs.org"
@@ -49,8 +49,4 @@ func (n *Npm) LatestVersion(ctx context.Context, pkgName string) (string, error)
 		return "", fmt.Errorf("npm registry %s: no version in response", pkgName)
 	}
 	return normalizeVersion(payload.Version), nil
-}
-
-func (n *Npm) UpdateCommand(pkgName string) []string {
-	return []string{"npm", "install", "-g", pkgName}
 }

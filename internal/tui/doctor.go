@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/dierodfer6/cliOne/internal/scan"
+	"github.com/dierodfer/cliOne/internal/scan"
 )
 
 // doctorLines builds the doctor view content as individual lines so it can be

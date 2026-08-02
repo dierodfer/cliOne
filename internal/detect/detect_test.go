@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/dierodfer6/cliOne/internal/catalog"
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/catalog"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // fixtureVersions maps tool ID -> version expected from testdata/detect/<id>.txt.
@@ -32,7 +32,7 @@ var fixtureVersions = map[string]string{
 	"poetry":         "1.7.1",
 	"gh":             "2.45.0",
 	"lazygit":        "0.40.2",
-	"copilot":        "1.0.0",
+	"copilot":        "1.0.77",
 	"claude-code":    "2.1.216",
 	"opencode":       "0.1.5",
 	"codex":          "0.5.0",
@@ -116,6 +116,53 @@ func TestRunDetectRealCommand(t *testing.T) {
 	}
 	if !res.Installed || res.Version == "" {
 		t.Fatalf("expected installed go with a version, got %+v", res)
+	}
+}
+
+func TestRunDetectPrefersStdoutOverStderrBanner(t *testing.T) {
+	// Reproduces the real-world failure mode: an update-notifier-style CLI
+	// (opencode, codex, npm, ...) prints a stale/"newer version available"
+	// number to stderr ahead of the actual installed version on stdout. An
+	// unanchored regex over combined output would latch onto the banner's
+	// number instead of the real one.
+	script := filepath.Join(t.TempDir(), "fake-tool.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho 'update available: 9.9.9' 1>&2\necho '0.1.5'\n"), 0o755); err != nil {
+		t.Fatalf("writing fake tool script: %v", err)
+	}
+	def := model.ToolDef{
+		ID:     "fake-tool",
+		Detect: model.DetectSpec{Cmd: script + " --version", Regex: `(?m)^(\d+\.\d+\.\d+)`},
+	}
+	res, err := RunDetect(context.Background(), def)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.Installed {
+		t.Fatalf("expected installed, got %+v", res)
+	}
+	if res.Version != "0.1.5" {
+		t.Fatalf("got version %q from stderr banner, want %q from stdout", res.Version, "0.1.5")
+	}
+}
+
+func TestRunDetectFallsBackToStderr(t *testing.T) {
+	// Tools like `java -version` report the version on stderr alone; the
+	// stdout-first strategy must still fall back to stderr when stdout has
+	// no match.
+	script := filepath.Join(t.TempDir(), "stderr-only.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho 'version \"17.0.8\"' 1>&2\n"), 0o755); err != nil {
+		t.Fatalf("writing fake tool script: %v", err)
+	}
+	def := model.ToolDef{
+		ID:     "stderr-only",
+		Detect: model.DetectSpec{Cmd: script, Regex: `version "(\d+\.\d+\.\d+)`},
+	}
+	res, err := RunDetect(context.Background(), def)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.Installed || res.Version != "17.0.8" {
+		t.Fatalf("expected version 17.0.8 from stderr fallback, got %+v", res)
 	}
 }
 

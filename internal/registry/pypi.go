@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 const (
 	pypiBaseURL = "https://pypi.org"
-	userAgent   = "clione/0.1 (+https://github.com/dierodfer6/cliOne)"
+	userAgent   = "clione/0.1 (+https://github.com/dierodfer/cliOne)"
 )
 
 func defaultHTTPClient() *http.Client {
@@ -59,8 +59,4 @@ func (p *PyPI) LatestVersion(ctx context.Context, pkgName string) (string, error
 		return "", fmt.Errorf("pypi %s: no version in response", pkgName)
 	}
 	return normalizeVersion(payload.Info.Version), nil
-}
-
-func (p *PyPI) UpdateCommand(pkgName string) []string {
-	return []string{"uv", "tool", "upgrade", pkgName}
 }

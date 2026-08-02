@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dierodfer6/cliOne/internal/model"
+	"github.com/dierodfer/cliOne/internal/model"
 )
 
 // LatestUpdate is the message payload produced by an async latest-version
@@ -47,22 +47,40 @@ func (s *Scanner) RefreshFuncs(ctx context.Context, cats []model.CategoryState, 
 	return out
 }
 
-// FetchLatest resolves the live latest version for one tool: through its
-// owning manager when it has one, otherwise via GitHub releases when the
-// official URL is a GitHub repo. The result is written through the cache on
-// success.
+// FetchLatest resolves the live latest version for one tool, preferring what
+// the project itself publishes over what any package manager happens to ship:
+//
+//  1. the catalog's version_source, i.e. the project's own release endpoint;
+//  2. GitHub releases, which is that same upstream authority for projects
+//     hosted there;
+//  3. the owning package manager's registry, as a last resort.
+//
+// Manager registries come last on purpose. A manager reports the version it
+// distributes, which routinely trails the real release — a Homebrew cask or an
+// npm package can sit a version behind upstream — so trusting it first makes
+// an out-of-date tool look current. Which manager installed a binary is still
+// worth knowing, and is reported separately as its source; it just isn't the
+// authority on what the newest release is.
+//
+// The result is written through the cache on success.
 func (s *Scanner) FetchLatest(ctx context.Context, def model.ToolDef, src model.SourceResult) LatestUpdate {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	var latest string
 	var err error
-	if m, ok := s.Registry.ForKind(src.Kind); ok {
-		latest, err = m.LatestVersion(ctx, def.PkgName())
-	} else if repo, ok := githubRepoFromURL(def.OfficialURL); ok && s.GitHub != nil {
+	repo, isGitHub := githubRepo(def)
+	switch {
+	case def.VersionSource != nil:
+		latest, err = fetchVersionSource(ctx, *def.VersionSource)
+	case isGitHub && s.GitHub != nil:
 		latest, err = s.GitHub.LatestVersion(ctx, repo)
-	} else {
-		err = ErrNoLatestSource
+	default:
+		if m, ok := s.Registry.ForKind(src.Kind); ok {
+			latest, err = m.LatestVersion(ctx, def.PkgName())
+		} else {
+			err = ErrNoLatestSource
+		}
 	}
 
 	res := model.VersionResult{Latest: latest, Err: err, FetchedAt: time.Now()}
@@ -70,6 +88,16 @@ func (s *Scanner) FetchLatest(ctx context.Context, def model.ToolDef, src model.
 		_ = s.Cache.SetLatest(def.ID, res)
 	}
 	return LatestUpdate{ToolID: def.ID, Result: res}
+}
+
+// githubRepo resolves the GitHub project whose releases are this tool's
+// upstream feed: the catalog's explicit repo when set, otherwise the official
+// URL when it is itself a GitHub URL.
+func githubRepo(def model.ToolDef) (string, bool) {
+	if def.Repo != "" {
+		return def.Repo, true
+	}
+	return githubRepoFromURL(def.OfficialURL)
 }
 
 // githubRepoFromURL extracts "org/repo" from an official URL like
