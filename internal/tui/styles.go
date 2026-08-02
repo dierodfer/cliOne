@@ -17,8 +17,6 @@ var (
 	dimStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	versionStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("111"))
 	latestStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	errStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	panelStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("203")).PaddingLeft(6)
 	statusStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("114")).Padding(0, 1)
 	doctorHeading  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
 	activePath     = lipgloss.NewStyle().Foreground(lipgloss.Color("114"))
