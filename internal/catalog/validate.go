@@ -73,8 +73,8 @@ func (c *Catalog) validateTools(catIDs map[string]bool) error {
 	return nil
 }
 
-// validateTool checks one tool's category reference, required fields, and
-// detect regex.
+// validateTool checks one tool's category reference, required fields, detect
+// regex, and the optional repo/version_source blocks.
 func validateTool(t model.ToolDef, catIDs map[string]bool) error {
 	if !catIDs[t.Category] {
 		return fmt.Errorf("catalog: tool %q references unknown category %q", t.ID, t.Category)
@@ -85,29 +85,54 @@ func validateTool(t model.ToolDef, catIDs map[string]bool) error {
 	if t.Detect.Cmd == "" {
 		return fmt.Errorf("catalog: tool %q is missing detect.cmd", t.ID)
 	}
-	re, err := regexp.Compile(t.Detect.Regex)
-	if err != nil {
-		return fmt.Errorf("catalog: tool %q detect.regex does not compile: %v", t.ID, err)
+	if _, err := compileSingleCaptureRegex("detect.regex", t.Detect.Regex); err != nil {
+		return fmt.Errorf("catalog: tool %q %w", t.ID, err)
 	}
-	if n := re.NumSubexp(); n != 1 {
-		return fmt.Errorf("catalog: tool %q detect.regex must have exactly one capture group, has %d", t.ID, n)
+	if err := validateRepo(t.Repo); err != nil {
+		return fmt.Errorf("catalog: tool %q %w", t.ID, err)
 	}
-	if t.Repo != "" {
-		if parts := strings.Split(t.Repo, "/"); len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("catalog: tool %q repo must be \"org/repo\", got %q", t.ID, t.Repo)
-		}
-	}
-	if t.VersionSource != nil {
-		if t.VersionSource.URL == "" {
-			return fmt.Errorf("catalog: tool %q has a version_source block with empty url", t.ID)
-		}
-		vre, err := regexp.Compile(t.VersionSource.Regex)
-		if err != nil {
-			return fmt.Errorf("catalog: tool %q version_source.regex does not compile: %v", t.ID, err)
-		}
-		if n := vre.NumSubexp(); n != 1 {
-			return fmt.Errorf("catalog: tool %q version_source.regex must have exactly one capture group, has %d", t.ID, n)
-		}
+	if err := validateVersionSource(t.VersionSource); err != nil {
+		return fmt.Errorf("catalog: tool %q %w", t.ID, err)
 	}
 	return nil
+}
+
+// validateRepo checks that a non-empty repo is in "org/repo" form.
+func validateRepo(repo string) error {
+	if repo == "" {
+		return nil
+	}
+	parts := strings.Split(repo, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("repo must be \"org/repo\", got %q", repo)
+	}
+	return nil
+}
+
+// validateVersionSource checks a non-nil version_source block's url and
+// regex, the latter sharing the detect.regex single-capture-group rule.
+func validateVersionSource(vs *model.VersionSourceSpec) error {
+	if vs == nil {
+		return nil
+	}
+	if vs.URL == "" {
+		return fmt.Errorf("has a version_source block with empty url")
+	}
+	_, err := compileSingleCaptureRegex("version_source.regex", vs.Regex)
+	return err
+}
+
+// compileSingleCaptureRegex compiles pattern and requires exactly one capture
+// group, the rule shared by every regex field in the catalog schema
+// (detect.regex, version_source.regex). field names the offending field in
+// the returned error.
+func compileSingleCaptureRegex(field, pattern string) (*regexp.Regexp, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("%s does not compile: %v", field, err)
+	}
+	if n := re.NumSubexp(); n != 1 {
+		return nil, fmt.Errorf("%s must have exactly one capture group, has %d", field, n)
+	}
+	return re, nil
 }

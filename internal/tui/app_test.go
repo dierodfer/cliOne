@@ -314,7 +314,7 @@ func TestRowWithoutOfficialURLDoesNothing(t *testing.T) {
 		Status: model.StatusUpdateAvail,
 		Detect: model.DetectResult{Installed: true, Version: "1.0.0"},
 	}
-	if cmd := a.actOnTool(ts); cmd != nil {
+	if a.actOnTool(ts) != nil {
 		t.Fatal("a row with no official URL has nothing to act on")
 	}
 }
