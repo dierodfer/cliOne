@@ -1,0 +1,97 @@
+cmd/clione/main.go
+  s_0cb4fd9c7d1a98::t_a442e96f34a85e 17-19
+go.mod
+  s_0cb4fd9c7d1a98::t_17c6e2c5a75c13 1
+internal/cache/cache.go
+  s_0cb4fd9c7d1a98::t_b07202befc4213 8
+internal/cache/cache_test.go
+  s_0cb4fd9c7d1a98::t_84c00055ef86c7 9
+internal/cache/store_json.go
+  s_0cb4fd9c7d1a98::t_ef2279225c218a 10
+internal/cache/store_memory.go
+  s_0cb4fd9c7d1a98::t_d5767cace0dea9 7
+internal/catalog/catalog.go
+  s_0cb4fd9c7d1a98::t_03a7dc5b06b501 10
+internal/catalog/validate.go
+  s_0cb4fd9c7d1a98::t_86066b394dd62b 8
+internal/cli/doctor.go
+  s_0cb4fd9c7d1a98::t_4d101d1a394fc2 8
+internal/cli/doctor_test.go
+  s_0cb4fd9c7d1a98::t_f0fb70a183a90d 11-17
+internal/cli/list.go
+  s_0cb4fd9c7d1a98::t_7b1032e4cc3c08 12-13
+internal/cli/list_test.go
+  s_0cb4fd9c7d1a98::t_a077c99916c53d 10-15
+internal/detect/detect.go
+  s_0cb4fd9c7d1a98::t_56b9ae96ff879d 14
+internal/detect/detect_test.go
+  s_0cb4fd9c7d1a98::t_f19f3fb916143d 10-11
+internal/registry/brew.go
+  s_0cb4fd9c7d1a98::t_5ad3c8f623e088 10
+internal/registry/cargo.go
+  s_0cb4fd9c7d1a98::t_9a74a3592926f4 9
+internal/registry/github_release.go
+  s_0cb4fd9c7d1a98::t_30fc1fe330c527 10
+internal/registry/npm.go
+  s_0cb4fd9c7d1a98::t_fb0f80f27716b3 9
+internal/registry/pypi.go
+  s_0cb4fd9c7d1a98::t_17e3b1d91e7ac4 10,15
+internal/registry/registry.go
+  s_0cb4fd9c7d1a98::t_ce33b4b13b8193 10
+internal/scan/doctor.go
+  s_0cb4fd9c7d1a98::t_e076fe6dcb5254 3
+internal/scan/doctor_test.go
+  s_0cb4fd9c7d1a98::t_29994bd0527f00 6
+internal/scan/refresh.go
+  s_0cb4fd9c7d1a98::t_7cda128ad5705a 9
+internal/scan/refresh_test.go
+  s_0cb4fd9c7d1a98::t_d33fbe35dcae20 8-10
+internal/scan/scanner.go
+  s_0cb4fd9c7d1a98::t_963f7223bac90e 11-16
+internal/scan/scanner_test.go
+  s_0cb4fd9c7d1a98::t_985562f5948d8f 6
+internal/scan/versionsource.go
+  s_0cb4fd9c7d1a98::t_56e0f898213193 11,15
+internal/scan/versionsource_test.go
+  s_0cb4fd9c7d1a98::t_8b39592b87e1b1 12-13
+internal/source/prefixes.go
+  s_0cb4fd9c7d1a98::t_fafa22ce3b9a7e 7
+internal/source/source.go
+  s_0cb4fd9c7d1a98::t_c9da5b0db37fd0 12
+internal/source/source_test.go
+  s_0cb4fd9c7d1a98::t_6ad8747dd880b4 10
+internal/tui/app.go
+  s_0cb4fd9c7d1a98::t_e4c0f3bfcca712 17-18
+internal/tui/app_test.go
+  s_0cb4fd9c7d1a98::t_839934193f5458 11-16
+internal/tui/doctor.go
+  s_0cb4fd9c7d1a98::t_ed051e1a52230e 8
+internal/tui/filter.go
+  s_0cb4fd9c7d1a98::t_b4d3deed19df75 6
+internal/tui/messages.go
+  s_0cb4fd9c7d1a98::t_ff43e1619b6169 4-5
+internal/tui/profile.go
+  s_0cb4fd9c7d1a98::t_d851c09b0f2935 3
+internal/tui/rowaction.go
+  s_0cb4fd9c7d1a98::t_a03052001c3f98 10
+internal/tui/styles.go
+  s_0cb4fd9c7d1a98::t_edc9f233e20e39 6
+internal/tui/tree.go
+  s_0cb4fd9c7d1a98::t_8ad870ac7d18cf 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1cd32a93517b8ba88a9f402f3651d7f62a5bfd42",
+  "prompts": {},
+  "sessions": {
+    "s_0cb4fd9c7d1a98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b4f3cb59-8b1b-4e37-9f8c-15620cee8287",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Diego Rodriguez <dierodfer6@gmail.com>"
+    }
+  }
+}
