@@ -567,4 +567,3 @@ func (a *App) findTool(toolID string) (model.ToolState, bool) {
 	}
 	return model.ToolState{}, false
 }
-
