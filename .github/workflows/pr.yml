@@ -4,12 +4,13 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Permissions are declared per job so each one gets only what it needs
+    # instead of inheriting a workflow-wide grant.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +25,9 @@ jobs:
         run: go vet ./...
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        # Pinned to the v7.0.1 commit: a mutable tag can be repointed at
+        # arbitrary code by anyone who can push to the action's repo.
+        uses: golangci/golangci-lint-action@9fae48acfc02a90574d7c304a1758ef9895495fa # v7.0.1
         with:
           version: v2.5.0
 
@@ -36,6 +39,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Upsert PR summary comment

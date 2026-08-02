@@ -49,19 +49,7 @@ func (a *App) renderTree(rows []row) string {
 		return b.String()
 	}
 
-	start, end := 0, len(rows)
-	if h := a.treeBodyHeight(); h > 0 && len(rows) > h {
-		start = a.scroll
-		end = start + h
-		if end > len(rows) {
-			end = len(rows)
-			start = end - h
-		}
-		if start < 0 {
-			start = 0
-		}
-	}
-
+	start, end := a.treeWindow(len(rows))
 	inner := a.innerWidth()
 	for i := start; i < end; i++ {
 		r := rows[i]
@@ -74,14 +62,40 @@ func (a *App) renderTree(rows []row) string {
 		}
 		b.WriteString(line)
 		b.WriteByte('\n')
-		if !r.isCategory && a.errOpen[r.toolID] {
-			if panel := a.renderErrorPanel(r.toolID); panel != "" {
-				b.WriteString(panel)
-				b.WriteByte('\n')
-			}
+		if panel := a.errorPanelFor(r); panel != "" {
+			b.WriteString(panel)
+			b.WriteByte('\n')
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// treeWindow returns the [start, end) row range to draw for a tree of n rows,
+// clamped to the viewport height. An unknown or ample height renders everything.
+func (a *App) treeWindow(n int) (start, end int) {
+	h := a.treeBodyHeight()
+	if h <= 0 || n <= h {
+		return 0, n
+	}
+	start = a.scroll
+	end = start + h
+	if end > n {
+		end = n
+		start = end - h
+	}
+	if start < 0 {
+		start = 0
+	}
+	return start, end
+}
+
+// errorPanelFor returns the inline error panel for a tool row whose panel the
+// user has opened, or "" when there is nothing to show.
+func (a *App) errorPanelFor(r row) string {
+	if r.isCategory || !a.errOpen[r.toolID] {
+		return ""
+	}
+	return a.renderErrorPanel(r.toolID)
 }
 
 func (a *App) renderRow(r row) string {

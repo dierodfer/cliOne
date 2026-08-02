@@ -86,7 +86,10 @@ func TestPyPILatestVersion(t *testing.T) {
 func TestGitHubReleaseLatestVersionViaRedirect(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/junegunn/fzf/releases/latest" {
-			w.Header().Set("Location", srv0URL(r)+"/junegunn/fzf/releases/tag/v0.60.3")
+			// A same-origin relative Location, built from a constant rather
+			// than from request data: TagFromLocation only reads the path, and
+			// echoing r.Host back would be a request-controlled redirect.
+			w.Header().Set("Location", "/junegunn/fzf/releases/tag/v0.60.3")
 			w.WriteHeader(http.StatusFound)
 			return
 		}
@@ -111,8 +114,6 @@ func TestGitHubReleaseLatestVersionViaRedirect(t *testing.T) {
 		t.Fatal("github release manager must not synthesize an update command")
 	}
 }
-
-func srv0URL(r *http.Request) string { return "http://" + r.Host }
 
 func TestGitHubReleaseNoRedirect(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

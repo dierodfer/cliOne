@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"runtime"
 
@@ -46,16 +47,19 @@ func (a *App) actOnTool(ts model.ToolState) tea.Cmd {
 	}
 }
 
-// openBrowser opens a URL with the platform opener.
+// openBrowser opens a URL with the platform opener. The opener is resolved to
+// an absolute path first so the command run is decided by $PATH lookup at a
+// single known point rather than implicitly at exec time.
 func openBrowser(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
+	opener := "xdg-open"
+	if runtime.GOOS == "darwin" {
+		opener = "open"
 	}
-	return cmd.Start()
+	bin, err := exec.LookPath(opener)
+	if err != nil {
+		return fmt.Errorf("no %s on PATH: %w", opener, err)
+	}
+	return exec.Command(bin, url).Start()
 }
 
 // applyUpdateResult resolves a finished update on a row.

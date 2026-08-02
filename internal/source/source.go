@@ -73,10 +73,13 @@ func dpkgOwns(ctx context.Context, path string) bool {
 	if runtime.GOOS == "darwin" {
 		return false
 	}
-	if _, err := exec.LookPath("dpkg"); err != nil {
+	// Run the absolute path LookPath resolved rather than re-resolving "dpkg"
+	// through $PATH inside exec.
+	bin, err := exec.LookPath("dpkg")
+	if err != nil {
 		return false
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	return exec.CommandContext(ctx, "dpkg", "-S", path).Run() == nil
+	return exec.CommandContext(ctx, bin, "-S", path).Run() == nil
 }

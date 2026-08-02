@@ -5,8 +5,6 @@ package scan
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -34,13 +32,18 @@ func New() (*Scanner, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, err := cache.DefaultPath()
-	if err != nil {
-		path = filepath.Join(os.TempDir(), "clione", "cache.json")
+	// With no per-user cache directory there is nowhere private to persist to.
+	// Fall back to an in-memory cache rather than a predictable path under the
+	// shared temp directory, which any local user could pre-create or tamper with.
+	var store cache.Cache
+	if path, err := cache.DefaultPath(); err == nil {
+		store = cache.NewJSONStore(path)
+	} else {
+		store = cache.NewMemoryStore()
 	}
 	return &Scanner{
 		Catalog:  cat,
-		Cache:    cache.NewJSONStore(path),
+		Cache:    store,
 		Resolver: source.NewResolver(),
 		Registry: registry.Default(),
 		GitHub:   registry.NewGitHubRelease(),
