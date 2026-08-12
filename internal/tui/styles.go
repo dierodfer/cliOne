@@ -22,6 +22,13 @@ var (
 	activePath     = lipgloss.NewStyle().Foreground(lipgloss.Color("114"))
 	shadowedPath   = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 
+	// Ink for the pixel wordmark on the startup splash. It paints a large
+	// solid area rather than a single line of text, so unlike the rest of the
+	// chrome it adapts to the terminal's background instead of assuming a
+	// dark one. The green matches the logo's brand green in assets/.
+	bannerInkStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "236", Dark: "231"})
+	bannerGreenStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "28", Dark: "77"})
+
 	// Rounded panel around the tree.
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

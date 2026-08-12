@@ -1,7 +1,14 @@
-# CLIOne
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo.svg">
+    <img src="assets/logo-light.svg" alt="CLIOne" width="440">
+  </picture>
+</p>
 
-[![CI](https://github.com/dierodfer/cliOne/actions/workflows/ci.yml/badge.svg)](https://github.com/dierodfer/cliOne/actions/workflows/ci.yml)
-[![PR checks](https://github.com/dierodfer/cliOne/actions/workflows/pr.yml/badge.svg)](https://github.com/dierodfer/cliOne/actions/workflows/pr.yml)
+<p align="center">
+  <a href="https://github.com/dierodfer/cliOne/actions/workflows/ci.yml"><img src="https://github.com/dierodfer/cliOne/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/dierodfer/cliOne/actions/workflows/pr.yml"><img src="https://github.com/dierodfer/cliOne/actions/workflows/pr.yml/badge.svg" alt="PR checks"></a>
+</p>
 
 CLIOne is a cross-platform TUI (Linux/macOS) that gives you visibility into the
 developer tools installed on your machine, organized by category, and updates
@@ -115,6 +122,25 @@ make run     # go run ./cmd/clione
 The tool catalog lives in `internal/catalog/data/tools.yaml` and is embedded
 into the binary; its schema is documented in
 [docs/catalog-schema.md](docs/catalog-schema.md).
+
+### Logo
+
+The logo is pixel art defined once as a bitmap in
+[`assets/gen_logo.py`](assets/gen_logo.py) and rendered from there to every
+format the project uses, so they never drift apart:
+
+| File | Use |
+|------|-----|
+| `assets/logo.svg` / `assets/logo.png` | transparent, light ink — for dark backgrounds |
+| `assets/logo-light.svg` / `assets/logo-light.png` | transparent, dark ink — for light backgrounds |
+| `internal/tui/banner.go` | the same artwork as half-block text, shown on the TUI's startup splash |
+
+All four image files have a transparent background. To change the artwork,
+edit the bitmap and regenerate (standard library only, no dependencies):
+
+```sh
+python3 assets/gen_logo.py
+```
 
 ## Releasing
 

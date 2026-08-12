@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""Generate the CLIOne logo assets from a single pixel-art definition.
+
+The logo is pixel art: a shell prompt (`>_`) followed by `CLI` in the
+foreground ink and `One` in the brand green. Rather than shipping a
+hand-edited binary, the artwork is defined once as a bitmap here and rendered
+to every format the project needs, so all of them stay in sync:
+
+    assets/logo.svg        transparent, light ink   (dark backgrounds)
+    assets/logo-light.svg  transparent, dark ink    (light backgrounds)
+    assets/logo.png        transparent, light ink   (raster, dark backgrounds)
+    assets/logo-light.png  transparent, dark ink    (raster, light backgrounds)
+    internal/tui/banner.go the same bitmap as half-block terminal art
+
+Run `python3 assets/gen_logo.py` from the repo root after editing the bitmap.
+It needs nothing but the standard library.
+"""
+
+import os
+import struct
+import zlib
+
+# --- palette ---------------------------------------------------------------
+# Two inks: the wordmark's neutral ink and the brand green used for "One".
+# The light variant darkens both so the mark stays legible on white.
+INK_DARK_BG = "#FFFFFF"  # on dark backgrounds
+INK_LIGHT_BG = "#111418"  # on light backgrounds
+GREEN_DARK_BG = "#35C93A"
+GREEN_LIGHT_BG = "#1F9E28"
+
+# --- bitmap ----------------------------------------------------------------
+# Caps are 5x7, lowercase 5x5 sitting on the same baseline. "." is empty.
+GLYPHS = {
+    "C": [
+        ".###.",
+        "#...#",
+        "#....",
+        "#....",
+        "#....",
+        "#...#",
+        ".###.",
+    ],
+    "L": [
+        "#....",
+        "#....",
+        "#....",
+        "#....",
+        "#....",
+        "#....",
+        "#####",
+    ],
+    "I": [
+        "#####",
+        "..#..",
+        "..#..",
+        "..#..",
+        "..#..",
+        "..#..",
+        "#####",
+    ],
+    "O": [
+        ".###.",
+        "#...#",
+        "#...#",
+        "#...#",
+        "#...#",
+        "#...#",
+        ".###.",
+    ],
+    "n": [
+        ".....",
+        ".....",
+        "#.##.",
+        "##..#",
+        "#...#",
+        "#...#",
+        "#...#",
+    ],
+    "e": [
+        ".....",
+        ".....",
+        ".###.",
+        "#...#",
+        "#####",
+        "#....",
+        ".###.",
+    ],
+}
+
+# The prompt caret: a 7x7 chevron drawn as a two-pixel-thick staircase.
+CARET = [
+    "##.....",
+    ".##....",
+    "..##...",
+    "...##..",
+    "..##...",
+    ".##....",
+    "##.....",
+]
+
+CELL_ROWS = 9  # 7 rows of type + a blank row + the cursor underscore
+GLYPH_W = 5
+ADVANCE = 6  # glyph width + one column of letter spacing
+TEXT_X = 11  # first column of the "C", leaving air after the prompt
+CARET_X = 0
+UNDERSCORE = (3, 8, 5)  # x, y, width of the blinking-cursor bar
+WORD = "CLIOne"
+GREEN_FROM = "O"  # this letter and everything after it is brand green
+
+PAD = 2  # empty cells kept around the artwork on every side
+
+
+def build_cells():
+    """Return {(x, y): "ink"|"green"} for every lit pixel of the logo."""
+    cells = {}
+    for y, row in enumerate(CARET):
+        for x, ch in enumerate(row):
+            if ch == "#":
+                cells[(CARET_X + x, y)] = "ink"
+    ux, uy, uw = UNDERSCORE
+    for x in range(ux, ux + uw):
+        cells[(x, uy)] = "ink"
+
+    green_at = WORD.index(GREEN_FROM)
+    for i, letter in enumerate(WORD):
+        color = "green" if i >= green_at else "ink"
+        ox = TEXT_X + i * ADVANCE
+        for y, row in enumerate(GLYPHS[letter]):
+            for x, ch in enumerate(row):
+                if ch == "#":
+                    cells[(ox + x, y)] = color
+    return cells
+
+
+def bounds(cells):
+    width = max(x for x, _ in cells) + 1
+    return width, CELL_ROWS
+
+
+def green_split():
+    """First column of the green part, used to color the terminal banner."""
+    return TEXT_X + WORD.index(GREEN_FROM) * ADVANCE
+
+
+# --- SVG -------------------------------------------------------------------
+
+
+def merge_runs(cells, color, width, height):
+    """Collapse horizontally adjacent pixels of one color into single rects.
+
+    Pixel art turns into hundreds of 1x1 rects otherwise; runs keep the file
+    small and diffable without changing what is drawn.
+    """
+    runs = []
+    for y in range(height):
+        x = 0
+        while x < width:
+            if cells.get((x, y)) == color:
+                start = x
+                while x < width and cells.get((x, y)) == color:
+                    x += 1
+                runs.append((start, y, x - start))
+            else:
+                x += 1
+    return runs
+
+
+def write_svg(path, cells, ink, green, scale=10):
+    width, height = bounds(cells)
+    vb_w, vb_h = width + PAD * 2, height + PAD * 2
+    lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {vb_w} {vb_h}" '
+        f'width="{vb_w * scale}" height="{vb_h * scale}" '
+        'role="img" aria-label="CLIOne">',
+        "  <title>CLIOne</title>",
+        "  <!-- Generated by assets/gen_logo.py - do not edit by hand. -->",
+    ]
+    for color, fill in (("ink", ink), ("green", green)):
+        runs = merge_runs(cells, color, width, height)
+        if not runs:
+            continue
+        lines.append(f'  <g fill="{fill}" shape-rendering="crispEdges">')
+        for x, y, w in runs:
+            lines.append(f'    <rect x="{x + PAD}" y="{y + PAD}" width="{w}" height="1"/>')
+        lines.append("  </g>")
+    lines.append("</svg>")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+# --- PNG -------------------------------------------------------------------
+
+
+def hex_rgba(color):
+    color = color.lstrip("#")
+    return (int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16), 255)
+
+
+def write_png(path, cells, ink, green, scale=20):
+    """Write a transparent RGBA PNG without any third-party dependency."""
+    width, height = bounds(cells)
+    px_w, px_h = (width + PAD * 2) * scale, (height + PAD * 2) * scale
+    ink_px, green_px = hex_rgba(ink), hex_rgba(green)
+    clear = (0, 0, 0, 0)
+
+    raw = bytearray()
+    for py in range(px_h):
+        cy = py // scale - PAD
+        raw.append(0)  # PNG filter type 0 (None) for this scanline
+        for px in range(px_w):
+            cx = px // scale - PAD
+            color = cells.get((cx, cy))
+            raw.extend(ink_px if color == "ink" else green_px if color == "green" else clear)
+
+    def chunk(tag, data):
+        body = tag + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    header = struct.pack(">IIBBBBB", px_w, px_h, 8, 6, 0, 0, 0)  # 8-bit RGBA
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+        + chunk(b"IEND", b"")
+    )
+    with open(path, "wb") as fh:
+        fh.write(png)
+
+
+# --- terminal banner -------------------------------------------------------
+
+HALF_BLOCKS = {(True, True): "█", (True, False): "▀", (False, True): "▄"}
+
+
+def banner_lines(cells):
+    """Render the bitmap as half-block text: two pixel rows per text row.
+
+    Each line is split into the ink half and the green half. The wordmark
+    never mixes the two colors within a column, so a single split point per
+    line is enough to color the banner faithfully.
+    """
+    width, height = bounds(cells)
+    split = green_split()
+    lines = []
+    for top in range(0, height, 2):
+        parts = []
+        for lo, hi in ((0, split), (split, width)):
+            text = ""
+            for x in range(lo, hi):
+                up = (x, top) in cells
+                down = (x, top + 1) in cells
+                text += HALF_BLOCKS.get((up, down), " ")
+            parts.append(text.rstrip())
+        lines.append(parts)
+    return lines
+
+
+BANNER_GO = '''package tui
+
+// Code generated by assets/gen_logo.py. DO NOT EDIT.
+
+// bannerInk and bannerGreen are the two halves of the CLIOne wordmark drawn
+// with half-block characters: bannerInk holds the prompt and "CLI",
+// bannerGreen the "One". They are rendered side by side, one line at a time,
+// so each half can carry its own color -- see renderBanner in app.go.
+var (
+\tbannerInk = []string{
+{INK}\t}
+
+\tbannerGreen = []string{
+{GREEN}\t}
+)
+
+// bannerWidth is the column width of the widest banner line, used to decide
+// whether the terminal is wide enough to show the wordmark at all.
+const bannerWidth = {WIDTH}
+'''
+
+
+def write_banner_go(path, cells):
+    # The green half always starts at the same column, so pad the ink half out
+    # to the split point; that keeps the two halves aligned once joined.
+    split = green_split()
+    lines = [
+        (ink.ljust(split) if green else ink, green) for ink, green in banner_lines(cells)
+    ]
+    src = (
+        BANNER_GO.replace("{INK}", "".join(f'\t\t"{ink}",\n' for ink, _ in lines))
+        .replace("{GREEN}", "".join(f'\t\t"{green}",\n' for _, green in lines))
+        .replace("{WIDTH}", str(max(len(ink) + len(green) for ink, green in lines)))
+    )
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(src)
+
+
+def main():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    assets = os.path.join(root, "assets")
+    cells = build_cells()
+
+    write_svg(os.path.join(assets, "logo.svg"), cells, INK_DARK_BG, GREEN_DARK_BG)
+    write_svg(os.path.join(assets, "logo-light.svg"), cells, INK_LIGHT_BG, GREEN_LIGHT_BG)
+    write_png(os.path.join(assets, "logo.png"), cells, INK_DARK_BG, GREEN_DARK_BG)
+    write_png(os.path.join(assets, "logo-light.png"), cells, INK_LIGHT_BG, GREEN_LIGHT_BG)
+    write_banner_go(os.path.join(root, "internal", "tui", "banner.go"), cells)
+    print("wrote logo.svg, logo-light.svg, logo.png, logo-light.png, internal/tui/banner.go")
+
+
+if __name__ == "__main__":
+    main()
