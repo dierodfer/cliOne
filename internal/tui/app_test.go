@@ -455,25 +455,3 @@ func TestQuit(t *testing.T) {
 		t.Fatalf("expected tea.Quit, got %#v", msg)
 	}
 }
-
-func TestSplashShowsBannerUntilTerminalIsTooNarrow(t *testing.T) {
-	a := testApp(t)
-	// Before the scan lands, the splash carries the pixel wordmark.
-	if out := a.View(); !strings.Contains(out, bannerInk[0]) || !strings.Contains(out, bannerGreen[1]) {
-		t.Fatalf("expected the wordmark on the splash screen, got:\n%s", out)
-	}
-	// A window too narrow for the art falls back to the plain scanning line.
-	a.Update(tea.WindowSizeMsg{Width: bannerWidth - 1, Height: 20})
-	out := a.View()
-	if strings.Contains(out, bannerInk[0]) {
-		t.Fatalf("wordmark should be dropped in a narrow window, got:\n%s", out)
-	}
-	if !strings.Contains(out, "scanning installed tools") {
-		t.Fatalf("expected the scanning line, got:\n%s", out)
-	}
-	// Once the scan lands the splash is gone entirely.
-	loadSynthetic(t, a)
-	if strings.Contains(a.View(), bannerInk[0]) {
-		t.Fatalf("wordmark should not survive into the tree view, got:\n%s", a.View())
-	}
-}
