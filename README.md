@@ -125,9 +125,8 @@ into the binary; its schema is documented in
 
 ### Logo
 
-The logo is pixel art defined once as a bitmap in
-[`assets/gen_logo.py`](assets/gen_logo.py) and rendered from there to every
-format the project uses, so they never drift apart:
+The logo is pixel art — a shell prompt followed by `CLI` in the neutral ink
+and `One` in the brand green (`#35C93A`) — kept in one form per surface:
 
 | File | Use |
 |------|-----|
@@ -135,12 +134,10 @@ format the project uses, so they never drift apart:
 | `assets/logo-light.svg` / `assets/logo-light.png` | transparent, dark ink — for light backgrounds |
 | `internal/tui/banner.go` | the same artwork as half-block text, shown on the TUI's startup splash |
 
-All four image files have a transparent background. To change the artwork,
-edit the bitmap and regenerate (standard library only, no dependencies):
-
-```sh
-python3 assets/gen_logo.py
-```
+All four image files have a transparent background; the README picks the
+light or dark variant from `prefers-color-scheme`. The SVGs are a grid of
+1x1 rects on a 50x13 viewBox, one row of the bitmap per `y` — edit those and
+the PNGs and the banner have to be updated to match.
 
 ## Releasing
 
