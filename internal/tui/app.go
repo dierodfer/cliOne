@@ -306,7 +306,7 @@ func (a *App) startFullRefresh() tea.Cmd {
 
 func (a *App) View() string {
 	if !a.scanned {
-		return a.headerBar() + "\n\n  scanning installed tools...\n"
+		return a.headerBar() + "\n\n" + a.splashBanner() + "  scanning installed tools...\n"
 	}
 
 	var body string
@@ -331,6 +331,24 @@ func (a *App) View() string {
 		legendLine = legend + "\n"
 	}
 	return a.headerBar() + "\n\n" + panel + "\n\n" + statusLine + legendLine + a.footerBar() + "\n"
+}
+
+// splashBanner draws the CLIOne pixel wordmark shown while the initial scan
+// runs — the same artwork as assets/logo.svg, rendered with half-block
+// characters. Each line is drawn in two pieces so the prompt and "CLI" keep
+// the neutral ink while "One" gets the brand green. It returns "" when the
+// terminal is known to be too narrow for the art, so a small window degrades
+// to the plain scanning line instead of wrapping the wordmark into noise.
+func (a *App) splashBanner() string {
+	if a.width > 0 && a.width < bannerWidth+2 {
+		return ""
+	}
+	var b strings.Builder
+	for i, ink := range bannerInk {
+		b.WriteString("  " + bannerInkStyle.Render(ink) + bannerGreenStyle.Render(bannerGreen[i]) + "\n")
+	}
+	b.WriteString("\n")
+	return b.String()
 }
 
 // legendBar decodes the per-manager colors used by the [source] tag on each
